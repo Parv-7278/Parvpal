@@ -1,0 +1,21 @@
+{
+  "name": "antarctic-station-backend",
+  "version": "1.0.0",
+  "description": "Node.js backend with Priority Queue and Satellite Latency Simulation for Indian Antarctic Research Stations",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

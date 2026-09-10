@@ -1,0 +1,23 @@
+{
+  "name": "antarctic-station-remote-management-monorepo",
+  "version": "1.0.0",
+  "description": "SIH 2026 Prototype: Digital Platform for Efficient Remote Management of Indian Antarctic Research Stations",
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:fastapi": "uvicorn main:app --reload --port 8000 --app-dir fastapi_backend",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "simulate": "node simulator/simulator.js",
+    "simulate:scenario": "node simulator/simulator.js --scenario",
+    "test:queue": "node backend/test_verification.js"
+  },
+  "keywords": [
+    "sih2026",
+    "antarctica",
+    "maitri",
+    "bharati",
+    "iot-simulation",
+    "priority-queue"
+  ],
+  "author": "",
+  "license": "ISC"
+}
