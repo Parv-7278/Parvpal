@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Bell, 
   User, 
@@ -10,11 +10,12 @@ import {
   Zap,
   Package,
   CloudSnow,
-  Activity,
-  Radio,
-  Sliders,
-  Terminal,
-  Layers
+  FlaskConical,
+  Layers,
+  FileText,
+  Check,
+  Building2,
+  Globe2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,75 +28,61 @@ export default function Header({
   onOpenAlerts,
   onOpenAuth 
 }) {
-  const { profile, isIndiaOperator, isStationOperator, assignedStation, logout } = useAuth();
-  const [timeStr, setTimeStr] = useState('');
-  const [dateStr, setDateStr] = useState('');
+  const { profile, isIndiaOperator, isStationOperator, assignedStation, loginWithDemoRole, logout } = useAuth();
+  const [isStationDropdownOpen, setIsStationDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const time = now.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit', 
-        hour12: true 
-      });
-      setTimeStr(`${time} IST`);
-
-      const date = now.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-      setDateStr(date);
-    };
-
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const indiaTabs = [
+  const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'digital-twin', label: 'Digital Twin', icon: Box },
     { id: 'infrastructure', label: 'Infrastructure', icon: Cpu },
     { id: 'energy', label: 'Energy', icon: Zap },
     { id: 'logistics', label: 'Logistics', icon: Package },
     { id: 'environment', label: 'Environment', icon: CloudSnow },
-    { id: 'research', label: 'Research', icon: Activity },
-    { id: 'communication', label: 'Comms', icon: Radio },
+    { id: 'research', label: 'Research', icon: FlaskConical },
     { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount },
-    { id: 'telemetry', label: 'Telemetry', icon: Layers, isLive: true },
-    { id: 'simulations', label: 'Simulations', icon: Sliders },
-    { id: 'remote-operations', label: 'Remote Ops', icon: Terminal },
+    { id: 'telemetry', label: 'Telemetry', icon: Layers },
+    { id: 'simulations', label: 'Reports', icon: FileText },
   ];
 
-  const stationTabs = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'digital-twin', label: 'Digital Twin', icon: Box },
-    { id: 'infrastructure', label: 'Infrastructure', icon: Cpu },
-    { id: 'energy', label: 'Energy', icon: Zap },
-    { id: 'logistics', label: 'Logistics', icon: Package },
-    { id: 'environment', label: 'Environment', icon: CloudSnow },
-    { id: 'research', label: 'Research', icon: Activity },
-    { id: 'alerts', label: 'Alerts', icon: Bell, badge: unreadCount },
-    { id: 'telemetry', label: 'Telemetry', icon: Layers, isLive: true },
-    { id: 'remote-operations', label: 'Remote Ops', icon: Terminal },
-  ];
+  // Dynamic Context Title based on selection (INDIA / MAITRI / BHARATI)
+  const isIndia = selectedStation === 'all-stations' || (isIndiaOperator && selectedStation === 'all-stations');
+  const isBharati = selectedStation === 'station-bharati';
+  
+  const contextSubtitle = isIndia 
+    ? 'INDIA CONTROL CENTRE' 
+    : isBharati 
+    ? 'BHARATI STATION' 
+    : 'MAITRI STATION';
 
-  const tabs = isIndiaOperator ? indiaTabs : stationTabs;
+  const currentStationLabel = isBharati 
+    ? 'Bharati Station' 
+    : isIndia
+    ? 'India HQ (All Stations)'
+    : 'Maitri Station';
 
-  const currentStationLabel = selectedStation === 'station-bharati' 
-    ? 'Bharati' 
-    : selectedStation === 'all-stations'
-    ? 'All Stations'
-    : 'Maitri';
+  const currentStationShort = isBharati ? 'BHARATI' : (isIndia ? 'INDIA HQ' : 'MAITRI');
+
+  const handleSelectStationOption = (stId) => {
+    setIsStationDropdownOpen(false);
+    if (stId === 'all-stations') {
+      if (onSelectStation) onSelectStation('all-stations');
+    } else if (stId === 'station-maitri') {
+      if (onSelectStation) onSelectStation('station-maitri');
+    } else if (stId === 'station-bharati') {
+      if (onSelectStation) onSelectStation('station-bharati');
+    }
+  };
 
   return (
     <header className="polaris-header">
-      {/* Brand & Logo + Station Quick Selector */}
+      {/* Brand & Logo + Dynamic Operational Context */}
       <div className="header-left-cluster">
-        <div className="header-brand">
+        <div 
+          className="header-brand" 
+          onClick={() => isIndiaOperator && onSelectStation && onSelectStation('all-stations')} 
+          style={{ cursor: isIndiaOperator ? 'pointer' : 'default' }}
+          title={isIndiaOperator ? 'Click to return to India HQ Control Centre' : undefined}
+        >
           <div className="logo-container">
             <svg className="polar-logo-svg" viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M20 2L36 12V24L20 31L4 24V12L20 2Z" stroke="#38bdf8" strokeWidth="1.8" fill="rgba(6, 182, 212, 0.12)" />
@@ -108,58 +95,65 @@ export default function Header({
           </div>
           <div className="brand-text">
             <h1 className="brand-title">POLARIS</h1>
-            <span className="brand-subtitle">Antarctic Digital Twin</span>
+            <span className="brand-subtitle">{isIndia ? 'INDIA CONTROL CENTRE' : 'ANTARCTIC DIGITAL TWIN'}</span>
           </div>
         </div>
 
-        {/* Station Selector: ONLY shown for India Operator */}
-        {isIndiaOperator ? (
-          <div className="header-station-pills">
-            <button
-              onClick={() => onSelectStation('all-stations')}
-              className={`station-pill-btn ${selectedStation === 'all-stations' ? 'active' : ''}`}
-              title="National Command: All Antarctic Stations"
-            >
-              <span className="station-pill-name">All Stations</span>
-              <span className="station-pill-status">
-                <span className="live-dot" /> Multi-HQ
-              </span>
-            </button>
-
-            <button
-              onClick={() => onSelectStation('station-maitri')}
-              className={`station-pill-btn ${selectedStation === 'station-maitri' ? 'active' : ''}`}
-              title="Switch to Maitri Station"
-            >
-              <span className="station-pill-name">Maitri</span>
-              <span className="station-pill-status">
-                <span className="live-dot" /> Online
-              </span>
-            </button>
-
-            <button
-              onClick={() => onSelectStation('station-bharati')}
-              className={`station-pill-btn ${selectedStation === 'station-bharati' ? 'active' : ''}`}
-              title="Switch to Bharati Station"
-            >
-              <span className="station-pill-name">Bharati</span>
-              <span className="station-pill-status">
-                <span className="live-dot" /> Online
-              </span>
-            </button>
-          </div>
-        ) : (
-          /* For Station Operators: Show Fixed Station Badge without selector pills */
-          <div className="header-assigned-station-badge">
-            <div className="station-lock-tag">
-              <Lock size={11} className="lock-icon" />
-              <span className="locked-station-name">{currentStationLabel} Station</span>
-            </div>
-            <span className="station-pill-status">
-              <span className="live-dot" /> Online (Assigned)
+        {/* Station Selector Dropdown Pill */}
+        <div className="header-station-dropdown-wrap">
+          <button 
+            type="button" 
+            className="station-selector-dropdown-btn"
+            onClick={() => isIndiaOperator && setIsStationDropdownOpen(!isStationDropdownOpen)}
+            title={isIndiaOperator ? 'Switch Active Polar Station' : 'Assigned Local Station'}
+          >
+            <Building2 size={13} className="text-cyan" style={{ marginRight: '4px' }} />
+            <span className="st-name-text">{currentStationLabel}</span>
+            {isIndiaOperator ? (
+              <ChevronDown size={13} className="text-dim" />
+            ) : null}
+            <span className="st-status-badge">
+              <span className="st-online-dot" /> Online (Assigned)
             </span>
-          </div>
-        )}
+          </button>
+
+          {isStationDropdownOpen && isIndiaOperator && (
+            <div className="station-dropdown-menu">
+              <div 
+                className={`st-dropdown-item ${selectedStation === 'all-stations' ? 'selected' : ''}`}
+                onClick={() => handleSelectStationOption('all-stations')}
+              >
+                <div className="st-drop-text">
+                  <span className="st-drop-name">🇮🇳 India HQ Command</span>
+                  <span className="st-drop-loc">Unified Multi-Station Control</span>
+                </div>
+                {selectedStation === 'all-stations' && <Check size={14} className="text-cyan" />}
+              </div>
+
+              <div 
+                className={`st-dropdown-item ${selectedStation === 'station-maitri' ? 'selected' : ''}`}
+                onClick={() => handleSelectStationOption('station-maitri')}
+              >
+                <div className="st-drop-text">
+                  <span className="st-drop-name">🧊 Maitri Station</span>
+                  <span className="st-drop-loc">Schirmacher Oasis (70°45′S)</span>
+                </div>
+                {selectedStation === 'station-maitri' && <Check size={14} className="text-cyan" />}
+              </div>
+
+              <div 
+                className={`st-dropdown-item ${selectedStation === 'station-bharati' ? 'selected' : ''}`}
+                onClick={() => handleSelectStationOption('station-bharati')}
+              >
+                <div className="st-drop-text">
+                  <span className="st-drop-name">📡 Bharati Station</span>
+                  <span className="st-drop-loc">Larsemann Hills (69°24′S)</span>
+                </div>
+                {selectedStation === 'station-bharati' && <Check size={14} className="text-cyan" />}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Primary Top Navigation Tabs with Icons */}
@@ -178,9 +172,6 @@ export default function Header({
               {tab.badge > 0 && (
                 <span className="nav-tab-badge">{tab.badge}</span>
               )}
-              {tab.isLive && (
-                <span className="nav-live-dot" />
-              )}
             </button>
           );
         })}
@@ -198,7 +189,7 @@ export default function Header({
           <span className="notification-badge">{unreadCount}</span>
         </button>
 
-        {/* Mission Controller Profile Badge with Switch / Auth Trigger */}
+        {/* Mission Controller Profile Badge */}
         <div 
           className="user-profile-badge interactive-profile-badge" 
           onClick={onOpenAuth}
@@ -209,19 +200,18 @@ export default function Header({
           </div>
           <div className="user-info">
             <span className="user-role">
-              {profile?.full_name || (isIndiaOperator ? 'Dr. Rajesh Sharma' : 'Station Lead')}
+              {profile?.full_name ? profile.full_name : (isIndiaOperator ? 'Dr. Rajesh Sharma' : 'Cmdr. Vikram')}
             </span>
-            <span className="user-status-row">
-              <span className={`operator-role-tag ${isIndiaOperator ? 'tag-india' : 'tag-station'}`}>
-                {isIndiaOperator ? 'INDIA HQ' : currentStationLabel.toUpperCase()}
-              </span>
-              <span className="live-dot" />
+            <span className="user-station-sub">
+              {isIndiaOperator ? 'India HQ' : (selectedStation === 'station-bharati' ? 'Bharati' : 'Maitri')}
             </span>
           </div>
-          <ChevronDown size={13} className="profile-dropdown-arrow" />
+          <div className="user-status-pill">
+            <span>{currentStationShort}</span>
+            <span className="status-mini-dot" />
+          </div>
         </div>
       </div>
     </header>
   );
 }
-

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sparkles, Radio, ArrowLeft, ArrowRight, Building2, Globe2, Shield } from 'lucide-react';
 import Header from './components/Header';
 import StationSelector from './components/StationSelector';
 import StationHealthGauge from './components/StationHealthGauge';
@@ -28,67 +29,65 @@ import AuthModal from './components/AuthModal';
 import LandingPage from './components/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TelemetryProvider, useTelemetry } from './context/TelemetryContext';
+import { ModalProvider, useModal } from './context/ModalContext';
 import { STATIONS_DATA } from './data/stationsData';
 import './App.css';
 
 function MainDashboard() {
-  const { profile, isIndiaOperator, isStationOperator, assignedStation, logout } = useAuth();
+  const { profile, isIndiaOperator, isStationOperator, assignedStation, loginWithDemoRole, logout } = useAuth();
   const { selectedStation, setSelectedStation } = useTelemetry();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { modalState, openDrillDown, closeModal } = useModal();
+  const [activeTab, setActiveTab] = useState('research');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    title: '',
-    type: '',
-    data: null,
-  });
+  const [showFlowModal, setShowFlowModal] = useState(false);
 
   const effectiveStationId = selectedStation === 'all-stations' ? 'station-maitri' : selectedStation;
   const stationData = STATIONS_DATA[effectiveStationId] || STATIONS_DATA['station-maitri'];
 
+  const handleReturnToIndia = () => {
+    loginWithDemoRole('india_operator');
+    setSelectedStation('all-stations');
+  };
+
   const handleOpenAlerts = () => {
-    setModalState({
-      isOpen: true,
+    openDrillDown({
       title: `Active Mission Alerts & Incident Log (${stationData.name})`,
       type: 'ALERT_VIEW_ALL',
       data: stationData.alerts || null,
+      station: stationData.name,
     });
   };
 
   const handleOpenInsight = (detailData) => {
-    setModalState({
-      isOpen: true,
+    openDrillDown({
       title: detailData?.title || 'Predictive Alert Detail',
       type: 'INSIGHT_DETAIL',
       data: detailData,
+      station: stationData.name,
     });
   };
 
   const handleOpenReport = (scenarioObj) => {
-    setModalState({
-      isOpen: true,
+    openDrillDown({
       title: `Simulation Report: ${scenarioObj?.name || scenarioObj?.label || 'Energy Diagnostic Analysis'}`,
       type: 'SIMULATION_REPORT',
       data: scenarioObj,
+      station: stationData.name,
     });
   };
 
   const handleOpenForecast = () => {
-    setModalState({
-      isOpen: true,
+    openDrillDown({
       title: `Detailed Polar Meteorological Forecast – ${stationData.name} (7-Day)`,
       type: 'FORECAST',
       data: stationData.weather,
+      station: stationData.name,
     });
-  };
-
-  const closeModal = () => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
   };
 
   return (
     <div className="polaris-dashboard-root">
-      {/* Top Navbar with POLARIS brand crest, quick station pills, primary nav tabs, and status */}
+      {/* Single Global Header / Navbar showing dynamic operational context */}
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
@@ -98,38 +97,6 @@ function MainDashboard() {
         onOpenAlerts={handleOpenAlerts}
         onOpenAuth={() => setIsAuthModalOpen(true)}
       />
-
-      {/* Role-Based Subheader Info Banner */}
-      <div className="operator-role-banner">
-        <div className="role-banner-left">
-          <span className="role-badge-label">
-            {isIndiaOperator 
-              ? (selectedStation === 'all-stations' ? '🇮🇳 INDIA HQ NATIONAL COMMAND (ALL STATIONS)' : '🇮🇳 INDIA HQ NATIONAL COMMAND') 
-              : `❄️ ${stationData.name.toUpperCase()} STATION • ONLINE • ASSIGNED`}
-          </span>
-          <span className="role-badge-desc">
-            {profile?.full_name ? <strong style={{ color: '#bae6fd' }}>{profile.full_name} ({profile.clearance || 'Level 4 Bravo'}) — </strong> : ''}
-            {isIndiaOperator 
-              ? 'Multi-Station Unified Telemetry, Cross-Station Switching, and ISRO Space-Ground Uplink Active' 
-              : `Restricted Operator Context: Access strictly isolated to ${stationData.name} Research Station`}
-          </span>
-        </div>
-        <div className="role-banner-right">
-          <button 
-            className="switch-operator-btn"
-            onClick={() => setIsAuthModalOpen(true)}
-          >
-            Switch User Context
-          </button>
-          <button 
-            className="switch-operator-btn sign-out-btn"
-            onClick={logout}
-            title="Sign out and return to Government Landing Page"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
 
       {/* Main View Switching controlled exclusively by Top Navbar */}
       {selectedStation === 'all-stations' && activeTab === 'overview' ? (
@@ -247,6 +214,21 @@ function MainDashboard() {
         </main>
       )}
 
+      {/* Main Bottom Footer matching screenshot */}
+      <footer className="polaris-main-footer">
+        <div className="footer-left">
+          <span>POLARIS &nbsp;|&nbsp; Ministry of Earth Sciences &nbsp;|&nbsp; Government of India</span>
+        </div>
+        <div className="footer-right">
+          <span>For a Safer, Smarter and More Resilient Antarctic Future</span>
+          <div className="footer-tricolor-badge">
+            <span className="ft-saffron" />
+            <span className="ft-white" />
+            <span className="ft-green" />
+          </div>
+        </div>
+      </footer>
+
       {/* Interactive Detail Modal Dialog */}
       <DetailModal 
         isOpen={modalState.isOpen}
@@ -262,6 +244,57 @@ function MainDashboard() {
         onClose={() => setIsAuthModalOpen(false)}
         isBarrier={false}
       />
+
+      {/* Operational Architecture & Routing Flow Modal */}
+      {showFlowModal && (
+        <div className="portal-modal-backdrop" onClick={() => setShowFlowModal(false)}>
+          <div className="flow-modal-dialog-box" onClick={(e) => e.stopPropagation()}>
+            <div className="flow-modal-header">
+              <div className="flow-modal-header-left">
+                <Sparkles size={20} className="text-cyan" />
+                <h4 className="flow-modal-title">POLARIS Operational Command & Routing Hierarchy</h4>
+              </div>
+              <button 
+                type="button" 
+                className="support-modal-close" 
+                onClick={() => setShowFlowModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flow-modal-body">
+              <PolarisFlowDiagram 
+                onNavigateNode={(target) => {
+                  setShowFlowModal(false);
+                  if (target === 'india') {
+                    loginWithDemoRole('india_operator');
+                    setSelectedStation('all-stations');
+                  } else if (target === 'maitri') {
+                    loginWithDemoRole('station-maitri');
+                    setSelectedStation('station-maitri');
+                  } else if (target === 'bharati') {
+                    loginWithDemoRole('station-bharati');
+                    setSelectedStation('station-bharati');
+                  }
+                }}
+                activeNode="auto"
+              />
+            </div>
+
+            <div className="flow-modal-footer">
+              <span className="flow-modal-footer-note">💡 Click any station node above to switch operational context instantaneously.</span>
+              <button 
+                type="button" 
+                className="support-close-action-btn"
+                onClick={() => setShowFlowModal(false)}
+              >
+                Close Architecture View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -281,7 +314,9 @@ export default function App() {
   return (
     <AuthProvider>
       <TelemetryProvider>
-        <AppContent />
+        <ModalProvider>
+          <AppContent />
+        </ModalProvider>
       </TelemetryProvider>
     </AuthProvider>
   );

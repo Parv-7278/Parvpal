@@ -8,24 +8,29 @@ from sensors import StationSensorModel
 from scenarios import run_generator_thermal_runaway, run_blizzard_warning
 
 def send_telemetry(payload):
+    st_name = "MAITRI" if "maitri" in payload['station_id'] else "BHARATI"
+    temp = payload.get('temperature', 0)
+    gen_temp = payload.get('generator_temperature', 0)
+    batt = payload.get('battery_level') or payload.get('battery') or 0
     try:
         response = requests.post(TELEMETRY_ENDPOINT, json=payload, timeout=3.0)
         if response.status_code in [200, 201, 202]:
-            print(f"[{payload['station_id']}] 📊 Telemetry Queued | Temp: {payload['temperature']}°C, Gen: {payload['generator_temperature']}°C")
+            print(f"[SIMULATOR] Station: {st_name} | Sending telemetry... | Temp: {temp}°C | Gen: {gen_temp}°C | Battery: {batt}% | Response: 200 OK")
         else:
-            print(f"[{payload['station_id']}] ⚠️ Backend returned {response.status_code}")
+            print(f"[SIMULATOR WARNING] Station: {st_name} | Backend returned {response.status_code} ({response.text})")
     except requests.exceptions.RequestException as e:
-        print(f"[{payload['station_id']}] ❌ Connection error to backend: {e}")
+        print(f"[SIMULATOR ERROR] Connection failed for {st_name} to {TELEMETRY_ENDPOINT}: {e}")
 
 def send_alert(payload):
+    st_name = "MAITRI" if "maitri" in payload['station_id'] else "BHARATI"
     try:
         response = requests.post(ALERT_ENDPOINT, json=payload, timeout=3.0)
         if response.status_code in [200, 201, 202]:
-            print(f"[{payload['station_id']}] 🚨 PRIORITY ALERT DISPATCHED: {payload['priority']} -> {payload['message']}")
+            print(f"[SIMULATOR ALERT] 🚨 {st_name} PRIORITY ALERT DISPATCHED: {payload.get('priority')} -> {payload.get('message')}")
         else:
-            print(f"[{payload['station_id']}] ⚠️ Alert post failed: {response.status_code}")
+            print(f"[SIMULATOR WARNING] Alert dispatch returned {response.status_code}")
     except requests.exceptions.RequestException as e:
-        print(f"[{payload['station_id']}] ❌ Alert dispatch error: {e}")
+        print(f"[SIMULATOR ERROR] Alert dispatch failed to {ALERT_ENDPOINT}: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Antarctic Research Station Sensor Simulator")
@@ -44,9 +49,9 @@ def main():
     }
 
     print("==================================================================")
-    print("🏔️  Antarctic Research Station Sensor Simulator (Maitri & Bharati)")
-    print(f"📡 Telemetry Target: {TELEMETRY_ENDPOINT}")
-    print(f"🚨 Alert Target: {ALERT_ENDPOINT}")
+    print("🏔️  [SIMULATOR] Starting POLARIS Station Telemetry Simulator")
+    print(f"📡 Target Endpoint: {TELEMETRY_ENDPOINT}")
+    print(f"🚨 Alert Endpoint:  {ALERT_ENDPOINT}")
     print("==================================================================")
 
     # If a specific scenario is requested
@@ -60,7 +65,7 @@ def main():
         return
 
     # Continuous background telemetry loop
-    print("\n▶️  Starting normal telemetry stream (Press Ctrl+C to stop)...\n")
+    print("\n▶️  [SIMULATOR] Starting normal multi-station telemetry loop...\n")
     try:
         step_count = 0
         while True:
@@ -69,11 +74,10 @@ def main():
                 telemetry = model.step_normal_drift()
                 send_telemetry(telemetry)
 
-            # Every 10 steps, offer a periodic prompt or automatic demonstration
             time.sleep(args.interval)
 
     except KeyboardInterrupt:
-        print("\n⏹️ Simulator stopped by user.")
+        print("\n⏹️ [SIMULATOR] Stopped by operator.")
         sys.exit(0)
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import { fetchLatestTelemetry, fetchQueueMetrics, fetchAlerts, fetchBenchmark } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { fetchLatestTelemetry, fetchQueueMetrics, fetchAlerts, getStationHealth } from '../services/api';
 import { useAuth } from './AuthContext';
 
 const TelemetryContext = createContext(null);
@@ -13,7 +12,7 @@ export const STATIONS = [
 export function TelemetryProvider({ children }) {
   const { role, isIndiaOperator, isStationOperator, assignedStation } = useAuth();
   
-  // Default station: If station operator, use assigned station; else default to station-maitri
+  // Single Source of Truth for Station Selection
   const [selectedStation, setSelectedStationState] = useState(() => {
     if (isStationOperator && assignedStation) {
       return assignedStation;
@@ -21,27 +20,12 @@ export function TelemetryProvider({ children }) {
     return 'station-maitri';
   });
 
-  // Automatically synchronize station when auth profile changes
-  useEffect(() => {
-    if (isStationOperator && assignedStation) {
-      setSelectedStationState(assignedStation);
-    }
-  }, [isStationOperator, assignedStation]);
-
-  const setSelectedStation = useCallback((stationId) => {
-    // Only India Operator can freely switch stations
-    if (isIndiaOperator) {
-      setSelectedStationState(stationId);
-    } else if (isStationOperator && assignedStation) {
-      // Locked to assigned station for station operators
-      setSelectedStationState(assignedStation);
-    }
-  }, [isIndiaOperator, isStationOperator, assignedStation]);
-
+  const [isLoadingStationData, setIsLoadingStationData] = useState(false);
+  const [isSimulatorOnline, setIsSimulatorOnline] = useState(false);
   const [telemetry, setTelemetry] = useState({});
   const [alerts, setAlerts] = useState([]);
   const [queueMetrics, setQueueMetrics] = useState({
-    label: 'Simulated Latency Monitor',
+    label: 'ISRO GSAT-30 Ku-Band Polar Link',
     queueSnapshot: { count: 0, criticalCount: 0, highCount: 0, normalCount: 0, lowCount: 0, items: [] },
     recentLogs: [],
     summary: {
@@ -52,105 +36,158 @@ export function TelemetryProvider({ children }) {
       low: { count: 0, avgQueueDelayMs: 0, avgTotalLatencyMs: 0 },
     },
   });
-  const [benchmarkData, setBenchmarkData] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
 
-  // Initial load
-  const loadInitialData = useCallback(async () => {
-    try {
-      const stationFilter = isStationOperator ? assignedStation : undefined;
-      const [telRes, metricRes, alertRes] = await Promise.all([
-        fetchLatestTelemetry(stationFilter),
-        fetchQueueMetrics(),
-        fetchAlerts(stationFilter),
-      ]);
+  const wsRef = useRef(null);
 
-      if (telRes.success && telRes.data) setTelemetry(telRes.data);
-      if (metricRes.success && metricRes.data) setQueueMetrics(metricRes.data);
-      if (alertRes.success && alertRes.data) setAlerts(alertRes.data);
-    } catch (err) {
-      console.warn('[TelemetryContext] Backend not yet connected:', err.message);
+  // Synchronize when auth changes (e.g. logging in as Maitri or Bharati operator)
+  useEffect(() => {
+    if (isStationOperator && assignedStation) {
+      setSelectedStationState(assignedStation);
     }
   }, [isStationOperator, assignedStation]);
 
-  const runLiveBenchmark = useCallback(async () => {
-    try {
-      const res = await fetchBenchmark();
-      if (res.success && res.data) {
-        setBenchmarkData(res.data);
+  // Centralized Station Switcher with immediate stale-data clearing & WS re-subscription
+  const setSelectedStation = useCallback((stationId) => {
+    if (isIndiaOperator) {
+      setIsLoadingStationData(true);
+      setSelectedStationState(stationId);
+
+      // Notify WebSocket server of station context change
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          action: 'set_station',
+          station_id: stationId === 'all-stations' ? 'station-maitri' : stationId
+        }));
       }
-      return res.data;
-    } catch (err) {
-      console.error('[TelemetryContext] Error running benchmark:', err);
-      return null;
+
+      // Finish loading transition
+      setTimeout(() => {
+        setIsLoadingStationData(false);
+      }, 150);
+    } else if (isStationOperator && assignedStation) {
+      setSelectedStationState(assignedStation);
     }
-  }, []);
+  }, [isIndiaOperator, isStationOperator, assignedStation]);
 
+  // Fetch Latest Station Telemetry & Alerts
+  const refreshData = useCallback(async () => {
+    try {
+      const stationFilter = isStationOperator ? assignedStation : (selectedStation === 'all-stations' ? undefined : selectedStation);
+      const [telRes, metricRes, alertRes] = await Promise.all([
+        fetchLatestTelemetry(stationFilter),
+        fetchQueueMetrics().catch(() => null),
+        fetchAlerts(stationFilter).catch(() => null),
+      ]);
+
+      if (telRes && telRes.success && telRes.data) {
+        setTelemetry((prev) => ({ ...prev, ...telRes.data }));
+        setIsSimulatorOnline(true);
+      }
+      if (metricRes && metricRes.success && metricRes.data) {
+        setQueueMetrics(metricRes.data);
+      }
+      if (alertRes && alertRes.success && alertRes.data) {
+        setAlerts(alertRes.data);
+      }
+    } catch (err) {
+      console.warn('[TelemetryContext] Backend synchronization notice:', err.message);
+    }
+  }, [isStationOperator, assignedStation, selectedStation]);
+
+  // Connect to WebSocket on Mount and maintain live streaming
   useEffect(() => {
-    loadInitialData();
+    refreshData();
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-    const socket = io(backendUrl, {
-      reconnectionAttempts: 5,
-      timeout: 3000,
-    });
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/telemetry';
+    let socket;
 
-    socket.on('connect', () => {
-      setIsConnected(true);
-    });
+    try {
+      socket = new WebSocket(wsUrl);
+      wsRef.current = socket;
 
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
+      socket.onopen = () => {
+        setIsSimulatorOnline(true);
+        const currentTarget = isStationOperator ? assignedStation : (selectedStation === 'all-stations' ? 'station-maitri' : selectedStation);
+        socket.send(JSON.stringify({
+          action: 'set_station',
+          station_id: currentTarget
+        }));
+      };
 
-    socket.on('telemetry_update', (metric) => {
-      if (metric.station_id && metric.data) {
-        // Only accept if India Operator or matching assigned station
-        if (!isStationOperator || metric.station_id === assignedStation) {
-          setTelemetry((prev) => ({
-            ...prev,
-            [metric.station_id]: {
-              ...prev[metric.station_id],
-              ...metric.data,
-              lastLatency: metric,
-            },
-          }));
+      socket.onmessage = (event) => {
+        try {
+          const packet = JSON.parse(event.data);
+          if (packet.packet_type === 'EMERGENCY_ALERT' && packet.data) {
+            const newAlert = packet.data;
+            if (!isStationOperator || newAlert.station_id === assignedStation) {
+              setAlerts((prev) => [newAlert, ...prev.filter(a => a.id !== newAlert.id)].slice(0, 50));
+            }
+          } else if (packet.station_id) {
+            setTelemetry((prev) => ({
+              ...prev,
+              [packet.station_id]: {
+                ...prev[packet.station_id],
+                station_id: packet.station_id,
+                station_name: packet.station_name,
+                temperature: packet.ambient_temperature_c,
+                wind_speed: packet.wind_speed_kmh,
+                battery: packet.battery_level_percent,
+                battery_level: packet.battery_level_percent,
+                power_consumption: packet.power_consumption_kw,
+                power_generation: packet.power_generation_kw,
+                generator_temperature: packet.generator_core_temp_c,
+                generator_status: packet.system_status || 'RUNNING',
+                seismic_frequency: packet.seismic_frequency_hz,
+                geomagnetic_kp: packet.geomagnetic_kp_index,
+                latency_ms: packet.comms_latency_ms,
+                timestamp: packet.timestamp,
+                time_label: packet.time_label,
+              }
+            }));
+            setIsSimulatorOnline(true);
+          }
+        } catch (err) {
+          console.debug('[TelemetryContext] Non-JSON WS packet:', event.data);
         }
-      }
-    });
+      };
 
-    socket.on('emergency_alert', (metric) => {
-      const alert = metric.data;
-      if (!isStationOperator || alert.station_id === assignedStation) {
-        setAlerts((prev) => [alert, ...prev.filter(a => a.id !== alert.id)].slice(0, 50));
-      }
-    });
+      socket.onerror = () => {
+        // Will fallback to periodic polling
+      };
 
-    socket.on('queue_metrics', (metrics) => {
-      setQueueMetrics(metrics);
-    });
+      socket.onclose = () => {
+        setIsSimulatorOnline(false);
+      };
+    } catch (e) {
+      console.warn('[TelemetryContext] WebSocket initialization notice:', e.message);
+    }
 
-    // Polling fallback every 3s in case socket is idle
-    const interval = setInterval(loadInitialData, 3000);
+    const interval = setInterval(refreshData, 3000);
 
     return () => {
-      socket.disconnect();
       clearInterval(interval);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
     };
-  }, [loadInitialData, isStationOperator, assignedStation]);
+  }, [refreshData, isStationOperator, assignedStation, selectedStation]);
 
   const activeStationId = isStationOperator ? (assignedStation || 'station-maitri') : selectedStation;
+  const effectiveId = activeStationId === 'all-stations' ? 'station-maitri' : activeStationId;
 
-  const currentTelemetry = telemetry[activeStationId] || {
-    station_id: activeStationId,
-    temperature: activeStationId === 'station-maitri' ? -18.7 : -14.2,
-    battery: activeStationId === 'station-maitri' ? 74.0 : 91.0,
-    battery_level: activeStationId === 'station-maitri' ? 74.0 : 91.0,
-    power_consumption: activeStationId === 'station-maitri' ? 105.0 : 148.0,
+  // Station-specific live telemetry without stale cross-contamination
+  const currentTelemetry = telemetry[effectiveId] || {
+    station_id: effectiveId,
+    station_name: effectiveId === 'station-maitri' ? 'MAITRI' : 'BHARATI',
+    temperature: effectiveId === 'station-maitri' ? -18.7 : -14.2,
+    battery: effectiveId === 'station-maitri' ? 74.0 : 91.0,
+    battery_level: effectiveId === 'station-maitri' ? 74.0 : 91.0,
+    power_consumption: effectiveId === 'station-maitri' ? 105.0 : 148.0,
+    power_generation: effectiveId === 'station-maitri' ? 132.0 : 185.0,
     generator_status: 'RUNNING',
-    generator_temperature: activeStationId === 'station-maitri' ? 78.4 : 74.1,
-    wind_speed: activeStationId === 'station-maitri' ? 28.0 : 44.0,
-    water_level: activeStationId === 'station-maitri' ? 88.0 : 94.0,
+    generator_temperature: effectiveId === 'station-maitri' ? 78.4 : 74.1,
+    wind_speed: effectiveId === 'station-maitri' ? 28.0 : 44.0,
+    water_level: effectiveId === 'station-maitri' ? 88.0 : 94.0,
     comms_status: 'SAT_LINK_NOMINAL',
   };
 
@@ -158,7 +195,9 @@ export function TelemetryProvider({ children }) {
     ? alerts.filter(a => a.station_id === assignedStation)
     : alerts;
 
-  const stationAlerts = filteredAlerts.filter(a => a.station_id === activeStationId);
+  const stationAlerts = activeStationId === 'all-stations' 
+    ? filteredAlerts 
+    : filteredAlerts.filter(a => a.station_id === activeStationId);
 
   return (
     <TelemetryContext.Provider
@@ -173,10 +212,9 @@ export function TelemetryProvider({ children }) {
         alerts: filteredAlerts,
         stationAlerts,
         queueMetrics,
-        benchmarkData,
-        runLiveBenchmark,
-        isConnected,
-        refreshData: loadInitialData,
+        isSimulatorOnline,
+        isLoadingStationData,
+        refreshData,
       }}
     >
       {children}

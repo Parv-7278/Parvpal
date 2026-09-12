@@ -27,10 +27,11 @@ import {
   Info
 } from 'lucide-react';
 import { useAuth, DEMO_OPERATORS } from '../context/AuthContext';
+import PolarisFlowDiagram from './PolarisFlowDiagram';
 
 export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
   const { profile, loginWithDemoRole, login, loading, error: authError, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('personas'); // 'personas' | 'credentials' | 'stations'
+  const [activeTab, setActiveTab] = useState('gateways'); // 'gateways' | 'personas' | 'credentials' | 'topology'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -325,6 +326,14 @@ export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
               <div className="portal-auth-nav-tabs">
                 <button 
                   type="button" 
+                  className={`auth-nav-tab-btn ${activeTab === 'gateways' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('gateways')}
+                >
+                  <Globe2 size={13} />
+                  <span>Command Hubs</span>
+                </button>
+                <button 
+                  type="button" 
                   className={`auth-nav-tab-btn ${activeTab === 'personas' ? 'active' : ''}`}
                   onClick={() => setActiveTab('personas')}
                 >
@@ -341,11 +350,11 @@ export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
                 </button>
                 <button 
                   type="button" 
-                  className={`auth-nav-tab-btn ${activeTab === 'stations' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('stations')}
+                  className={`auth-nav-tab-btn ${activeTab === 'topology' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('topology')}
                 >
-                  <Globe2 size={13} />
-                  <span>Workspaces</span>
+                  <Sparkles size={13} />
+                  <span>Flowchart</span>
                 </button>
               </div>
 
@@ -363,7 +372,69 @@ export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
                 </div>
               )}
 
-              {/* TAB 1: PERSONAS */}
+              {/* TAB 1: COMMAND GATEWAYS */}
+              {activeTab === 'gateways' && (
+                <div className="portal-workspaces-stack">
+                  <div 
+                    className="workspace-select-card card-gateway-india"
+                    onClick={() => handleQuickLogin('india_operator')}
+                  >
+                    <div className="ws-card-left">
+                      <div className="ws-circle-icon blue-circle">
+                        <Building2 size={18} />
+                      </div>
+                      <div className="ws-text-wrap">
+                        <div className="ws-title-row">
+                          <h5 className="ws-heading">🇮🇳 INDIA CONTROL CENTRE</h5>
+                          <span className="ws-role-pill pill-india">HQ Command</span>
+                        </div>
+                        <p className="ws-description">Multi-station telemetry, cross-station switching, ISRO uplink & national dispatch authority.</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={16} className="ws-arrow-icon" />
+                  </div>
+
+                  <div 
+                    className="workspace-select-card card-gateway-maitri"
+                    onClick={() => handleQuickLogin('station-maitri')}
+                  >
+                    <div className="ws-card-left">
+                      <div className="ws-circle-icon cyan-circle">
+                        <Activity size={18} />
+                      </div>
+                      <div className="ws-text-wrap">
+                        <div className="ws-title-row">
+                          <h5 className="ws-heading">🧊 MAITRI DASHBOARD</h5>
+                          <span className="ws-role-pill pill-maitri">Station Lead</span>
+                        </div>
+                        <p className="ws-description">Schirmacher Oasis inland base microgrid, life support & Priyadarshini water management.</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={16} className="ws-arrow-icon" />
+                  </div>
+
+                  <div 
+                    className="workspace-select-card card-gateway-bharati"
+                    onClick={() => handleQuickLogin('station-bharati')}
+                  >
+                    <div className="ws-card-left">
+                      <div className="ws-circle-icon green-circle">
+                        <Zap size={18} />
+                      </div>
+                      <div className="ws-text-wrap">
+                        <div className="ws-title-row">
+                          <h5 className="ws-heading">🧊 BHARATI DASHBOARD</h5>
+                          <span className="ws-role-pill pill-bharati">Station Lead</span>
+                        </div>
+                        <p className="ws-description">Larsemann Hills coastal radar, ISRO ground station, CHP plant & RO desalination.</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={16} className="ws-arrow-icon" />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: PERSONAS */}
               {activeTab === 'personas' && (
                 <div className="portal-personas-list">
                   {DEMO_OPERATORS.map((op) => (
@@ -390,7 +461,7 @@ export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
                 </div>
               )}
 
-              {/* TAB 2: CREDENTIALS */}
+              {/* TAB 3: CREDENTIALS */}
               {activeTab === 'credentials' && (
                 <form className="login-credentials-form" onSubmit={handleFormSubmit}>
                   <div className="portal-form-group">
@@ -445,56 +516,18 @@ export default function AuthModal({ isOpen, onClose, isBarrier = false }) {
                 </form>
               )}
 
-              {/* TAB 3: WORKSPACES */}
-              {activeTab === 'stations' && (
-                <div className="portal-workspaces-stack">
-                  <div 
-                    className="workspace-select-card"
-                    onClick={() => handleQuickLogin('india_operator')}
-                  >
-                    <div className="ws-card-left">
-                      <div className="ws-circle-icon blue-circle">
-                        <Building2 size={18} />
-                      </div>
-                      <div className="ws-text-wrap">
-                        <h5 className="ws-heading">India HQ National Command</h5>
-                        <p className="ws-description">Multi-station monitoring and full uplink control.</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="ws-arrow-icon" />
-                  </div>
-
-                  <div 
-                    className="workspace-select-card"
-                    onClick={() => handleQuickLogin('station-maitri')}
-                  >
-                    <div className="ws-card-left">
-                      <div className="ws-circle-icon cyan-circle">
-                        <Activity size={18} />
-                      </div>
-                      <div className="ws-text-wrap">
-                        <h5 className="ws-heading">Maitri Research Station</h5>
-                        <p className="ws-description">Schirmacher Oasis microgrid and telemetry.</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="ws-arrow-icon" />
-                  </div>
-
-                  <div 
-                    className="workspace-select-card"
-                    onClick={() => handleQuickLogin('station-bharati')}
-                  >
-                    <div className="ws-card-left">
-                      <div className="ws-circle-icon green-circle">
-                        <Zap size={18} />
-                      </div>
-                      <div className="ws-text-wrap">
-                        <h5 className="ws-heading">Bharati Research Station</h5>
-                        <p className="ws-description">Larsemann Hills CHP and ISRO radome.</p>
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="ws-arrow-icon" />
-                  </div>
+              {/* TAB 4: ARCHITECTURE FLOWCHART */}
+              {activeTab === 'topology' && (
+                <div className="portal-topology-tab-content">
+                  <PolarisFlowDiagram 
+                    onNavigateNode={(target) => {
+                      if (target === 'india') handleQuickLogin('india_operator');
+                      else if (target === 'maitri') handleQuickLogin('station-maitri');
+                      else if (target === 'bharati') handleQuickLogin('station-bharati');
+                    }}
+                    activeNode="auto"
+                    compact={true}
+                  />
                 </div>
               )}
 

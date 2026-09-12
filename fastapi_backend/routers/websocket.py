@@ -38,6 +38,10 @@ class ConnectionManager:
         for dead in dead_connections:
             self.active_connections.discard(dead)
 
+    async def broadcast_json(self, data: dict):
+        msg = json.dumps(data)
+        await self.broadcast(msg)
+
 manager = ConnectionManager()
 
 def generate_telemetry_tick(station_id: str = "station-maitri") -> WebSocketTickerPayload:

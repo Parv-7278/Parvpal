@@ -9,6 +9,7 @@ const alertRoutes = require('./routes/alertRoutes');
 const stationRoutes = require('./routes/stationRoutes');
 const telemetryRoutes = require('./routes/telemetryRoutes');
 const simulatorRoutes = require('./routes/simulatorRoutes');
+const aiAnalystRoutes = require('./routes/aiAnalystRoutes');
 const { defaultSatelliteLink } = require('./queue/satelliteLink');
 
 dotenv.config();
@@ -50,9 +51,10 @@ app.use('/api/sensor-data', sensorRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/stations', stationRoutes);
 
-// Additional helper routes (Telemetry alias, Simulator scenarios)
+// Additional helper routes (Telemetry alias, Simulator scenarios, AI Analyst)
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/simulator', simulatorRoutes);
+app.use('/api/research/ai-analyst', aiAnalystRoutes);
 
 // 404 Catch-All Handler
 app.use((req, res) => {

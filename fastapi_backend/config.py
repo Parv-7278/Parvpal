@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     WS_TICK_INTERVAL_SECONDS: float = 1.5
     SIMULATION_MAX_DAYS: int = 90
 
+    # AI Research Analyst Provider Settings
+    AI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    AI_MODEL: str = "gemini-1.5-flash"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,15 @@ from fastapi.exceptions import RequestValidationError
 
 from config import settings
 from services.supabase_client import get_supabase_client, is_supabase_configured
-from routers import stations_router, research_router, simulations_router, websocket_router
+from routers import (
+    stations_router, 
+    research_router, 
+    simulations_router, 
+    websocket_router,
+    telemetry_router,
+    alerts_router,
+    ai_analyst_router
+)
 
 # Configure Logging
 logging.basicConfig(
@@ -133,6 +142,9 @@ app.include_router(stations_router)
 app.include_router(research_router)
 app.include_router(simulations_router)
 app.include_router(websocket_router)
+app.include_router(telemetry_router)
+app.include_router(alerts_router)
+app.include_router(ai_analyst_router)
 
 # Standalone Execution Entrypoint
 if __name__ == "__main__":

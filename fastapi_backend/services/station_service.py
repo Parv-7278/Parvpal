@@ -496,3 +496,225 @@ class StationService:
             sparklines=spark_obj,
             timestamp=datetime.utcnow()
         )
+
+    # --------------------------------------------------------------------------
+    # LIVE SIMULATOR INGESTION & ALERT PIPELINE
+    # --------------------------------------------------------------------------
+    _ALERTS_DB: List[Dict[str, Any]] = [
+        {
+            "id": "alert-m-1",
+            "station_id": "station-maitri",
+            "station_name": "MAITRI",
+            "priority": "HIGH",
+            "category": "WEATHER",
+            "message": "Katabatic Wind Warning: Sustained gusts reaching 78 km/h across Schirmacher ridge.",
+            "sensor_key": "wind_speed",
+            "sensor_value": 78.0,
+            "threshold_value": 70.0,
+            "action_required": "Secure auxiliary outdoor scientific gear and radar masts.",
+            "triggered_at": "2025-09-12T14:15:00Z",
+            "acknowledged": False,
+            "status_color": "#f59e0b"
+        },
+        {
+            "id": "alert-m-2",
+            "station_id": "station-maitri",
+            "station_name": "MAITRI",
+            "priority": "NORMAL",
+            "category": "POWER",
+            "message": "Diesel Generator #2 runtime exceeds 280h schedule. Maintenance inspection scheduled.",
+            "sensor_key": "generator_runtime",
+            "sensor_value": 284.0,
+            "threshold_value": 250.0,
+            "action_required": "Inspect fuel injector filters and oil viscosity.",
+            "triggered_at": "2025-09-12T13:40:00Z",
+            "acknowledged": False,
+            "status_color": "#38bdf8"
+        },
+        {
+            "id": "alert-m-3",
+            "station_id": "station-maitri",
+            "station_name": "MAITRI",
+            "priority": "LOW",
+            "category": "LIFE_SUPPORT",
+            "message": "Priyadarshini Lake intake trace heating power consumption steady.",
+            "sensor_key": "lake_intake_kw",
+            "sensor_value": 8.0,
+            "threshold_value": 12.0,
+            "action_required": "Monitor overnight freeze threshold.",
+            "triggered_at": "2025-09-12T12:00:00Z",
+            "acknowledged": True,
+            "status_color": "#10b981"
+        },
+        {
+            "id": "alert-b-1",
+            "station_id": "station-bharati",
+            "station_name": "BHARATI",
+            "priority": "NORMAL",
+            "category": "COMMS",
+            "message": "ISRO Ground Station Ku-band dish tracking Cartosat satellite pass.",
+            "sensor_key": "isro_tracking_deg",
+            "sensor_value": 45.2,
+            "threshold_value": 90.0,
+            "action_required": "Telemetry downlink buffer sync in progress.",
+            "triggered_at": "2025-09-12T14:20:00Z",
+            "acknowledged": False,
+            "status_color": "#38bdf8"
+        },
+        {
+            "id": "alert-b-2",
+            "station_id": "station-bharati",
+            "station_name": "BHARATI",
+            "priority": "LOW",
+            "category": "WATER",
+            "message": "Reverse Osmosis Desalination unit operating at 94% membrane efficiency.",
+            "sensor_key": "ro_efficiency",
+            "sensor_value": 94.0,
+            "threshold_value": 85.0,
+            "action_required": "Routine seawater intake flushing nominal.",
+            "triggered_at": "2025-09-12T11:30:00Z",
+            "acknowledged": True,
+            "status_color": "#10b981"
+        }
+    ]
+
+    @classmethod
+    def get_alerts(cls, station_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        if not station_id or station_id == "all" or station_id == "all-stations":
+            return list(cls._ALERTS_DB)
+        norm_id = cls.normalize_station_id(station_id)
+        return [a for a in cls._ALERTS_DB if a.get("station_id") == norm_id]
+
+    @classmethod
+    def add_alert(cls, alert_dict: Dict[str, Any]) -> Dict[str, Any]:
+        alert_id = alert_dict.get("id") or f"alert-{int(datetime.utcnow().timestamp() * 1000)}"
+        st_id = cls.normalize_station_id(alert_dict.get("station_id", "station-maitri"))
+        st_name = "MAITRI" if "maitri" in st_id else "BHARATI"
+        prio = alert_dict.get("priority", "NORMAL").upper()
+
+        color_map = {
+            "CRITICAL": "#ef4444",
+            "HIGH": "#f97316",
+            "NORMAL": "#38bdf8",
+            "LOW": "#10b981"
+        }
+
+        new_alert = {
+            "id": alert_id,
+            "station_id": st_id,
+            "station_name": st_name,
+            "priority": prio,
+            "category": alert_dict.get("category", "GENERAL").upper(),
+            "message": alert_dict.get("message", "Telemetry anomaly detected"),
+            "sensor_key": alert_dict.get("sensor_key"),
+            "sensor_value": alert_dict.get("sensor_value"),
+            "threshold_value": alert_dict.get("threshold_value"),
+            "action_required": alert_dict.get("action_required", "Verify telemetry subsystem"),
+            "triggered_at": alert_dict.get("triggered_at") or datetime.utcnow().isoformat(),
+            "acknowledged": alert_dict.get("acknowledged", False),
+            "status_color": color_map.get(prio, "#38bdf8")
+        }
+
+        # Prevent exact duplicate message flood
+        existing = [a for a in cls._ALERTS_DB if a["message"] == new_alert["message"] and not a["acknowledged"]]
+        if not existing:
+            cls._ALERTS_DB.insert(0, new_alert)
+        return new_alert
+
+    @classmethod
+    def ack_alert(cls, alert_id: str) -> Optional[Dict[str, Any]]:
+        for a in cls._ALERTS_DB:
+            if a["id"] == alert_id:
+                a["acknowledged"] = True
+                return a
+        return None
+
+    @classmethod
+    def clear_alerts(cls, station_id: Optional[str] = None):
+        if not station_id or station_id == "all":
+            cls._ALERTS_DB.clear()
+        else:
+            norm_id = cls.normalize_station_id(station_id)
+            cls._ALERTS_DB = [a for a in cls._ALERTS_DB if a["station_id"] != norm_id]
+
+    @classmethod
+    def update_station_telemetry(cls, payload: Any) -> Dict[str, Any]:
+        """
+        Updates live in-memory registry from Python simulator ingest,
+        detects threshold breaches (e.g. generator overheat >= 95°C),
+        and updates station health and power status.
+        """
+        st_id = cls.normalize_station_id(getattr(payload, "station_id", "station-maitri"))
+        data = RAW_STATIONS_DATA.get(st_id)
+        if not data:
+            return {}
+
+        temp = float(getattr(payload, "temperature", -18.0))
+        batt = float(getattr(payload, "battery_level", None) or getattr(payload, "battery", None) or 74.0)
+        power = float(getattr(payload, "power_consumption", 105.0))
+        gen_temp = float(getattr(payload, "generator_temperature", 75.0))
+        gen_status = getattr(payload, "generator_status", "RUNNING")
+        wind = float(getattr(payload, "wind_speed", 28.0))
+        water = float(getattr(payload, "water_level", 88.0))
+        comms = getattr(payload, "comms_status", "SAT_LINK_NOMINAL")
+
+        # Update weather
+        data["weather"]["temp"] = f"{temp:.1f}"
+        data["weather"]["windSpeed"] = f"{wind:.0f} km/h"
+
+        # Update energy
+        data["energy"]["consumption"] = round(power, 1)
+        data["energy"]["batteryPercent"] = round(batt, 1)
+        data["energy"]["generation"] = round(power + random.uniform(15.0, 30.0), 1)
+        data["energy"]["surplus"] = round(data["energy"]["generation"] - power, 1)
+
+        # Update generator source
+        if "gen1" in data["energy"]["sources"]:
+            data["energy"]["sources"]["gen1"]["current"] = round(power * 0.45, 1)
+            data["energy"]["sources"]["gen1"]["loadPct"] = round(min(100.0, (power * 0.45 / 50.0) * 100), 1)
+
+        # Critical Overheat Detection (95°C threshold)
+        if gen_temp >= 95.0:
+            gen_status = "CRITICAL"
+            data["health"]["infrastructure"] = 62
+            data["health"]["energy"] = 54
+            data["health"]["total"] = 68
+            data["health"]["rating"] = "Warning"
+            data["health"]["ratingColor"] = "#fbbf24"
+            if "gen1" in data["energy"]["sources"]:
+                data["energy"]["sources"]["gen1"]["status"] = "Overheating (Critical)"
+
+            cls.add_alert({
+                "station_id": st_id,
+                "priority": "CRITICAL",
+                "category": "GENERATOR",
+                "message": f"🚨 {data['name']} GENERATOR FAILURE RISK: Core temperature breached 95°C! Immediate shutdown required.",
+                "sensor_key": "generator_temperature",
+                "sensor_value": gen_temp,
+                "threshold_value": 90.0,
+                "action_required": "Switch to Generator 2 and initiate non-critical load shedding."
+            })
+        elif gen_temp >= 85.0:
+            gen_status = "WARNING"
+            data["health"]["energy"] = 72
+            if "gen1" in data["energy"]["sources"]:
+                data["energy"]["sources"]["gen1"]["status"] = "Warning (High Temp)"
+        else:
+            if "gen1" in data["energy"]["sources"]:
+                data["energy"]["sources"]["gen1"]["status"] = "Online"
+
+        return {
+            "station_id": st_id,
+            "station_name": data["name"],
+            "temperature": temp,
+            "battery_level": batt,
+            "power_consumption": power,
+            "generator_temperature": gen_temp,
+            "generator_status": gen_status,
+            "wind_speed": wind,
+            "water_level": water,
+            "comms_status": comms,
+            "health_score": data["health"]["total"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+

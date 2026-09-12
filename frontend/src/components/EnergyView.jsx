@@ -29,12 +29,14 @@ import {
   Check
 } from 'lucide-react';
 import { STATIONS_DATA } from '../data/stationsData';
+import { useModal } from '../context/ModalContext';
 
 export default function EnergyView({ 
   selectedStation = 'station-maitri', 
   onOpenAlerts,
   onOpenReport 
 }) {
+  const { openDrillDown } = useModal();
   const [breakdownPeriod, setBreakdownPeriod] = useState('today'); // 'today' | '7days' | '30days'
   const [forecastPeriod, setForecastPeriod] = useState('7days'); // '7days' | '30days'
   const [insightModalOpen, setInsightModalOpen] = useState(false);
@@ -151,7 +153,32 @@ export default function EnergyView({
           </div>
 
           <div className="banner-metrics-cluster">
-            <div className="banner-metric-pill gen-pill">
+            <div 
+              className="banner-metric-pill gen-pill clickable-drilldown-card"
+              onClick={() => openDrillDown({
+                title: 'Total Microgrid Power Generation',
+                station: stationData.name,
+                category: 'ENERGY',
+                metricKey: 'power_generation',
+                currentValue: energy.generation,
+                unit: 'kW',
+                status: 'NORMAL',
+                thresholds: { warning: '< 100 kW', critical: '< 80 kW' },
+                stats: { min: '92 kW', avg: '128 kW', max: '155 kW' },
+                historicalData: [
+                  { time: '00:00', val: 112 },
+                  { time: '04:00', val: 118 },
+                  { time: '08:00', val: 135 },
+                  { time: '12:00', val: 144 },
+                  { time: '16:00', val: 139 },
+                  { time: '20:00', val: 128 },
+                  { time: 'Now', val: energy.generation },
+                ],
+                interpretation: `Microgrid generation on ${stationData.name} operates with a positive spinning reserve margin.`,
+                recommendation: 'Continuous fuel filtration cycle operating nominally.',
+              })}
+              title="Click to inspect power generation telemetry"
+            >
               <div className="pill-icon-box green-box"><Zap size={13} /></div>
               <div className="pill-meta">
                 <span className="pill-lbl">Total Generation</span>
@@ -159,7 +186,32 @@ export default function EnergyView({
               </div>
             </div>
 
-            <div className="banner-metric-pill cons-pill">
+            <div 
+              className="banner-metric-pill cons-pill clickable-drilldown-card"
+              onClick={() => openDrillDown({
+                title: 'Total Microgrid Power Consumption',
+                station: stationData.name,
+                category: 'ENERGY',
+                metricKey: 'power_consumption',
+                currentValue: energy.consumption,
+                unit: 'kW',
+                status: 'NORMAL',
+                thresholds: { warning: '> 130 kW', critical: '> 150 kW' },
+                stats: { min: '85 kW', avg: '104 kW', max: '124 kW' },
+                historicalData: [
+                  { time: '00:00', val: 94 },
+                  { time: '04:00', val: 89 },
+                  { time: '08:00', val: 106 },
+                  { time: '12:00', val: 112 },
+                  { time: '16:00', val: 108 },
+                  { time: '20:00', val: 102 },
+                  { time: 'Now', val: energy.consumption },
+                ],
+                interpretation: `Life support and science lab power loads are well within distribution bus capacity at ${stationData.name}.`,
+                recommendation: 'Non-critical thermal loads configured for automatic load shedding if generation drops.',
+              })}
+              title="Click to inspect power consumption telemetry"
+            >
               <div className="pill-icon-box blue-box"><Activity size={13} /></div>
               <div className="pill-meta">
                 <span className="pill-lbl">Total Consumption</span>
@@ -167,7 +219,32 @@ export default function EnergyView({
               </div>
             </div>
 
-            <div className="banner-metric-pill batt-pill">
+            <div 
+              className="banner-metric-pill batt-pill clickable-drilldown-card"
+              onClick={() => openDrillDown({
+                title: 'BESS Battery Bank SoC & State of Health',
+                station: stationData.name,
+                category: 'ENERGY',
+                metricKey: 'battery_level',
+                currentValue: energy.batteryPercent,
+                unit: '%',
+                status: energy.batteryPercent < 40 ? 'WARNING' : 'OPTIMAL',
+                thresholds: { warning: '< 40% SoC', critical: '< 20% SoC' },
+                stats: { min: '62%', avg: '84%', max: '98%' },
+                historicalData: [
+                  { time: '00:00', val: 74 },
+                  { time: '04:00', val: 68 },
+                  { time: '08:00', val: 78 },
+                  { time: '12:00', val: 86 },
+                  { time: '16:00', val: 84 },
+                  { time: '20:00', val: 82 },
+                  { time: 'Now', val: energy.batteryPercent },
+                ],
+                interpretation: `LiFePO4 battery storage bank at ${stationData.name} provides ${energy.batteryChargeKWh || '380 kWh'} of backup energy reserve.`,
+                recommendation: 'Float charge balancing active across all 12 rack modules.',
+              })}
+              title="Click to inspect battery storage telemetry"
+            >
               <div className="pill-icon-box green-box"><BatteryCharging size={13} /></div>
               <div className="pill-meta">
                 <span className="pill-lbl">Battery Charge</span>
@@ -189,7 +266,32 @@ export default function EnergyView({
         {/* Top Grid: Power Generation & Consumption Curve + Generation Sources */}
         <div className="energy-top-row-grid">
           {/* Card 1: Power Generation & Consumption */}
-          <div className="energy-gen-cons-card polaris-card">
+          <div 
+            className="energy-gen-cons-card polaris-card clickable-drilldown-card"
+            onClick={() => openDrillDown({
+              title: '24-Hour Microgrid Power Generation vs Consumption',
+              station: stationData.name,
+              category: 'ENERGY',
+              metricKey: 'power_generation',
+              currentValue: energy.generation,
+              unit: 'kW',
+              status: 'NORMAL',
+              thresholds: { warning: 'Surplus < 15 kW', critical: 'Surplus < 0 kW' },
+              stats: { min: '86 kW', avg: '116 kW', max: '152 kW' },
+              historicalData: [
+                { time: '00:00', val: 110 },
+                { time: '04:00', val: 115 },
+                { time: '08:00', val: 135 },
+                { time: '12:00', val: 142 },
+                { time: '16:00', val: 138 },
+                { time: '20:00', val: 125 },
+                { time: 'Now', val: energy.generation },
+              ],
+              interpretation: 'Dynamic microgrid balancing showing steady base-load diesel operation complemented by renewable solar/wind contribution.',
+              recommendation: 'Inverter synchronization parameters optimal at 50.02 Hz.',
+            })}
+            title="Click to expand full microgrid power curve"
+          >
             <div className="card-header-with-action">
               <div className="hdr-title-with-pill">
                 <span className="card-title">Power Generation & Consumption</span>
@@ -312,7 +414,31 @@ export default function EnergyView({
 
             <div className="sources-four-grid">
               {/* Source 1 */}
-              <div className="source-item-box">
+              <div 
+                className="source-item-box clickable-drilldown-card"
+                onClick={() => openDrillDown({
+                  title: `${energy.sources.gen1.name} Primary Diesel Genset`,
+                  station: stationData.name,
+                  category: 'INFRASTRUCTURE',
+                  metricKey: 'generator_temperature',
+                  currentValue: energy.sources.gen1.current,
+                  unit: 'kW',
+                  status: energy.sources.gen1.status === 'Active' || energy.sources.gen1.status === 'Running' ? 'NORMAL' : 'STANDBY',
+                  thresholds: { warning: '> 90 kW load / > 85°C temp', critical: '> 105 kW load / > 95°C temp' },
+                  stats: { min: '0 kW', avg: `${energy.sources.gen1.current} kW`, max: `${energy.sources.gen1.max} kW` },
+                  historicalData: [
+                    { time: '00:00', val: +(energy.sources.gen1.current - 4).toFixed(1) },
+                    { time: '04:00', val: +(energy.sources.gen1.current - 2).toFixed(1) },
+                    { time: '08:00', val: +(energy.sources.gen1.current + 3).toFixed(1) },
+                    { time: '12:00', val: +(energy.sources.gen1.current + 5).toFixed(1) },
+                    { time: '16:00', val: +(energy.sources.gen1.current).toFixed(1) },
+                    { time: 'Now', val: energy.sources.gen1.current },
+                  ],
+                  interpretation: `Primary base-load generator operating stably at ${energy.sources.gen1.loadPct}% rated capacity. Fuel injection manifold pressure nominal.`,
+                  recommendation: 'Next scheduled injector maintenance in 140 operational hours.',
+                })}
+                title="Click to view generator telemetry and thermal parameters"
+              >
                 <div className="source-top-line">
                   <div className="src-icon-name">
                     <Cpu size={14} className="text-cyan" />
@@ -333,7 +459,29 @@ export default function EnergyView({
               </div>
 
               {/* Source 2 */}
-              <div className="source-item-box">
+              <div 
+                className="source-item-box clickable-drilldown-card"
+                onClick={() => openDrillDown({
+                  title: `${energy.sources.gen2.name} Standby Diesel Genset`,
+                  station: stationData.name,
+                  category: 'INFRASTRUCTURE',
+                  metricKey: 'generator_temperature',
+                  currentValue: energy.sources.gen2.current,
+                  unit: 'kW',
+                  status: energy.sources.gen2.status === 'Active' || energy.sources.gen2.status === 'Running' ? 'NORMAL' : 'STANDBY',
+                  thresholds: { warning: '> 90 kW', critical: '> 105 kW' },
+                  stats: { min: '0 kW', avg: `${energy.sources.gen2.current} kW`, max: `${energy.sources.gen2.max} kW` },
+                  historicalData: [
+                    { time: '00:00', val: energy.sources.gen2.current },
+                    { time: '06:00', val: energy.sources.gen2.current },
+                    { time: '12:00', val: energy.sources.gen2.current },
+                    { time: '18:00', val: energy.sources.gen2.current },
+                  ],
+                  interpretation: 'Secondary backup genset on hot-standby auto-crank sequencer. Sump oil heater active.',
+                  recommendation: 'Auto-transfer switch test scheduled for Friday 10:00 UTC.',
+                })}
+                title="Click to view generator telemetry"
+              >
                 <div className="source-top-line">
                   <div className="src-icon-name">
                     <Cpu size={14} className="text-cyan" />
@@ -354,7 +502,32 @@ export default function EnergyView({
               </div>
 
               {/* Source 3: Solar */}
-              <div className="source-item-box">
+              <div 
+                className="source-item-box clickable-drilldown-card"
+                onClick={() => openDrillDown({
+                  title: `${energy.sources.solar.name} Photovoltaic Array`,
+                  station: stationData.name,
+                  category: 'ENERGY',
+                  metricKey: 'solar_generation',
+                  currentValue: energy.sources.solar.current,
+                  unit: 'kW',
+                  status: 'NORMAL',
+                  thresholds: { warning: '< 5 kW (Icing)', critical: '0 kW' },
+                  stats: { min: '0 kW', avg: `${energy.sources.solar.current} kW`, max: `${energy.sources.solar.max} kW` },
+                  historicalData: [
+                    { time: '00:00', val: 0 },
+                    { time: '04:00', val: 4 },
+                    { time: '08:00', val: 14 },
+                    { time: '12:00', val: 24 },
+                    { time: '16:00', val: 16 },
+                    { time: '20:00', val: 2 },
+                    { time: 'Now', val: energy.sources.solar.current },
+                  ],
+                  interpretation: 'Bifacial polar solar panels capturing direct and albedo snow reflection radiation.',
+                  recommendation: 'Panel angle tracking controller optimal.',
+                })}
+                title="Click to view solar telemetry"
+              >
                 <div className="source-top-line">
                   <div className="src-icon-name">
                     <Sun size={14} className="text-amber" />
@@ -375,7 +548,31 @@ export default function EnergyView({
               </div>
 
               {/* Source 4: Wind */}
-              <div className="source-item-box">
+              <div 
+                className="source-item-box clickable-drilldown-card"
+                onClick={() => openDrillDown({
+                  title: `${energy.sources.wind.name} Micro-Turbine Farm`,
+                  station: stationData.name,
+                  category: 'ENERGY',
+                  metricKey: 'wind_generation',
+                  currentValue: energy.sources.wind.current,
+                  unit: 'kW',
+                  status: 'NORMAL',
+                  thresholds: { warning: '> 60 km/h (Furling)', critical: '> 85 km/h (Locked)' },
+                  stats: { min: '0 kW', avg: `${energy.sources.wind.current} kW`, max: `${energy.sources.wind.max} kW` },
+                  historicalData: [
+                    { time: '00:00', val: 8 },
+                    { time: '04:00', val: 12 },
+                    { time: '08:00', val: 16 },
+                    { time: '12:00', val: 18 },
+                    { time: '16:00', val: 14 },
+                    { time: 'Now', val: energy.sources.wind.current },
+                  ],
+                  interpretation: 'Vertical axis wind turbines (VAWT) generating clean auxiliary power from katabatic breeze.',
+                  recommendation: 'Anti-icing rotor heating active.',
+                })}
+                title="Click to view wind turbine telemetry"
+              >
                 <div className="source-top-line">
                   <div className="src-icon-name">
                     <Wind size={14} className="text-cyan" />
@@ -456,7 +653,32 @@ export default function EnergyView({
           </div>
 
           {/* Card 2: Battery Storage */}
-          <div className="e-battery-card polaris-card">
+          <div 
+            className="e-battery-card polaris-card clickable-drilldown-card"
+            onClick={() => openDrillDown({
+              title: 'Battery Energy Storage System (BESS)',
+              station: stationData.name,
+              category: 'ENERGY',
+              metricKey: 'battery_level',
+              currentValue: energy.batteryPercent,
+              unit: '%',
+              status: energy.batteryPercent < 40 ? 'WARNING' : 'OPTIMAL',
+              thresholds: { warning: '< 40% SoC', critical: '< 20% SoC' },
+              stats: { min: '62%', avg: '84%', max: '98%' },
+              historicalData: [
+                { time: '00:00', val: 74 },
+                { time: '04:00', val: 68 },
+                { time: '08:00', val: 78 },
+                { time: '12:00', val: 86 },
+                { time: '16:00', val: 84 },
+                { time: '20:00', val: 82 },
+                { time: 'Now', val: energy.batteryPercent },
+              ],
+              interpretation: `LiFePO4 rack charge currently at ${energy.batteryPercent}% (${energy.batteryChargeKWh || '380 kWh'} / ${energy.batteryCapacityKWh || '500 kWh'}).`,
+              recommendation: 'Autonomous battery heating keeping cells at +18°C.',
+            })}
+            title="Click to inspect battery storage diagnostics"
+          >
             <div className="card-header-with-action">
               <span className="card-title">Battery Storage (BESS)</span>
               <span className="live-pill-badge"><span className="live-dot" /> Live</span>
@@ -516,7 +738,30 @@ export default function EnergyView({
           </div>
 
           {/* Card 3: Fuel Storage */}
-          <div className="e-fuel-card polaris-card">
+          <div 
+            className="e-fuel-card polaris-card clickable-drilldown-card"
+            onClick={() => openDrillDown({
+              title: 'Aviation & Polar Diesel Fuel Reserves',
+              station: stationData.name,
+              category: 'LOGISTICS',
+              metricKey: 'fuel_reserve',
+              currentValue: energy.fuelLiters,
+              unit: 'Liters',
+              status: energy.fuelBarPercent < 25 ? 'WARNING' : 'NORMAL',
+              thresholds: { warning: '< 45 Days', critical: '< 20 Days' },
+              stats: { min: '120,000 L', avg: energy.fuelLiters, max: '350,000 L' },
+              historicalData: [
+                { time: '19 May', val: 245000 },
+                { time: '21 May', val: 243200 },
+                { time: '23 May', val: 241500 },
+                { time: '25 May', val: 239800 },
+                { time: 'Now', val: 238000 },
+              ],
+              interpretation: `Strategic fuel reserves at ${stationData.name} are projected to sustain uninterrupted life support for ${energy.fuelDays || '180 days'}.`,
+              recommendation: 'Scheduled summer replenishment voyage confirmed on schedule.',
+            })}
+            title="Click to view fuel inventory and consumption trends"
+          >
             <div className="card-header-with-action">
               <span className="card-title">Fuel Storage & Reserve</span>
               <span className="live-pill-badge"><span className="live-dot" /> Live</span>
@@ -695,7 +940,29 @@ export default function EnergyView({
           ==================================================================== */}
       <aside className="energy-right-sidebar">
         {/* Card 1: Energy Status Circular Gauge */}
-        <div className="e-status-gauge-card polaris-card">
+        <div 
+          className="e-status-gauge-card polaris-card clickable-drilldown-card"
+          onClick={() => openDrillDown({
+            title: `${stationData.name} Microgrid Health Index`,
+            station: stationData.name,
+            category: 'INFRASTRUCTURE',
+            metricKey: 'energy_health',
+            currentValue: energyStatus.score,
+            unit: '/100',
+            status: energyStatus.rating === 'Optimal' ? 'OPTIMAL' : 'NORMAL',
+            thresholds: { warning: '< 70', critical: '< 50' },
+            stats: { min: '72/100', avg: `${energyStatus.score}/100`, max: '98/100' },
+            historicalData: [
+              { time: '00:00', val: 82 },
+              { time: '06:00', val: 85 },
+              { time: '12:00', val: 84 },
+              { time: '18:00', val: 84 },
+            ],
+            interpretation: 'Overall composite energy reliability score calculated across generation capacity, fuel reserves, battery health, and distribution bus stability.',
+            recommendation: 'Subsystems operating with no critical alerts.',
+          })}
+          title="Click to view overall energy health index"
+        >
           <div className="card-header-simple">
             <span className="card-title">Energy Status</span>
           </div>
@@ -730,7 +997,33 @@ export default function EnergyView({
             {(energyStatus.subsystems || []).map((sub, idx) => {
               const SubIcon = getSubsystemIcon(sub.label);
               return (
-                <div key={idx} className="e-subsystem-row">
+                <div 
+                  key={idx} 
+                  className="e-subsystem-row clickable-drilldown-card"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDrillDown({
+                      title: `${sub.label} Diagnostic Subsystem`,
+                      station: stationData.name,
+                      category: 'INFRASTRUCTURE',
+                      metricKey: 'subsystem_metric',
+                      currentValue: sub.val,
+                      unit: '',
+                      status: 'NORMAL',
+                      thresholds: { warning: 'Deviation > 15%', critical: 'Trip limit breached' },
+                      stats: { min: 'Nominal', avg: sub.val, max: 'Peak capacity' },
+                      historicalData: [
+                        { time: '00:00', val: 90 },
+                        { time: '06:00', val: 92 },
+                        { time: '12:00', val: 95 },
+                        { time: '18:00', val: 94 },
+                      ],
+                      interpretation: `Subsystem ${sub.label} telemetry indicates nominal operation within military-grade arctic thresholds.`,
+                      recommendation: 'Auto-logging enabled on mission recorder.',
+                    });
+                  }}
+                  title={`Click to inspect ${sub.label} telemetry`}
+                >
                   <div className="e-sub-left">
                     <SubIcon size={12} style={{ color: sub.color }} />
                     <span className="e-sub-label">{sub.label}</span>
@@ -769,7 +1062,23 @@ export default function EnergyView({
               }
 
               return (
-                <div key={alt.id} className={`e-alert-item ${alertClass}`}>
+                <div 
+                  key={alt.id} 
+                  className={`e-alert-item ${alertClass} clickable-drilldown-card`}
+                  onClick={() => openDrillDown({
+                    title: alt.title,
+                    station: stationData.name,
+                    category: 'ALERTS',
+                    metricKey: 'alert_metric',
+                    currentValue: alt.severity.toUpperCase(),
+                    unit: 'SEVERITY',
+                    status: alt.severity === 'critical' ? 'CRITICAL' : 'WARNING',
+                    thresholds: { warning: 'Warning trigger threshold', critical: 'Emergency trip breached' },
+                    interpretation: `Alert triggered by ${alt.source || 'Station SCADA'}. Incident logged at ${alt.time}. Recommended response: Verify circuit breaker status and switch to secondary unit if temperature or overload persists.`,
+                    recommendation: 'Acknowledge alert and notify station commander.',
+                  })}
+                  title="Click to view full alert detail & mitigation procedure"
+                >
                   <div className={`e-alert-icon-box ${bgClass}`}><Icon size={12} /></div>
                   <div className="e-alert-meta">
                     <span className="e-alert-title">{alt.title}</span>

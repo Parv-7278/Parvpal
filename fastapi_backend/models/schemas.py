@@ -344,3 +344,50 @@ class WebSocketTickerPayload(BaseModel):
     geomagnetic_kp_index: float
     comms_latency_ms: int
     system_status: str
+
+# ==============================================================================
+# 10. SIMULATOR INGESTION & ALERT SCHEMAS
+# ==============================================================================
+
+class TelemetryIngestPayload(BaseModel):
+    station_id: str = Field(..., description="Station ID e.g. 'station-maitri' or 'station-bharati'")
+    station_name: Optional[str] = None
+    temperature: float = Field(..., description="Ambient temperature in °C")
+    battery_level: Optional[float] = Field(default=None, description="Battery level %")
+    battery: Optional[float] = Field(default=None, description="Battery level alias")
+    power_consumption: float = Field(..., description="Power consumption in kW")
+    generator_status: Optional[str] = Field(default="RUNNING", description="Generator operational status")
+    generator_temperature: float = Field(..., description="Generator core temperature in °C")
+    wind_speed: float = Field(..., description="Wind speed in km/h")
+    water_level: float = Field(..., description="Water storage level %")
+    comms_status: Optional[str] = Field(default="SAT_LINK_NOMINAL", description="Satellite comms status")
+    recorded_at: Optional[str] = None
+
+class AlertIngestPayload(BaseModel):
+    id: Optional[str] = None
+    station_id: str
+    priority: str = Field(default="NORMAL", description="'CRITICAL', 'HIGH', 'NORMAL', 'LOW'")
+    category: Optional[str] = Field(default="GENERAL", description="Subsystem category e.g. 'GENERATOR', 'WEATHER'")
+    message: str
+    sensor_key: Optional[str] = None
+    sensor_value: Optional[float] = None
+    threshold_value: Optional[float] = None
+    action_required: Optional[str] = None
+    triggered_at: Optional[str] = None
+    acknowledged: Optional[bool] = False
+
+class AlertItem(BaseModel):
+    id: str
+    station_id: str
+    station_name: str
+    priority: str
+    category: str
+    message: str
+    sensor_key: Optional[str] = None
+    sensor_value: Optional[float] = None
+    threshold_value: Optional[float] = None
+    action_required: Optional[str] = None
+    triggered_at: str
+    acknowledged: bool = False
+    status_color: str = "#ef4444"
+

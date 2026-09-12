@@ -1,9 +1,9 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowLeft, Building2, Radio } from 'lucide-react';
 
 export default function StationSelector({ selectedStation, onSelectStation }) {
-  const { isIndiaOperator, isStationOperator, assignedStation } = useAuth();
+  const { isIndiaOperator, isStationOperator, assignedStation, loginWithDemoRole } = useAuth();
 
   const allStations = [
     {
@@ -28,6 +28,13 @@ export default function StationSelector({ selectedStation, onSelectStation }) {
     ? allStations.filter(st => st.id === assignedStation)
     : allStations;
 
+  const handleReturnToIndia = () => {
+    loginWithDemoRole('india_operator');
+    if (onSelectStation) {
+      onSelectStation('all-stations');
+    }
+  };
+
   return (
     <div className="station-selector-section polaris-card">
       <div className="card-header-simple">
@@ -36,7 +43,7 @@ export default function StationSelector({ selectedStation, onSelectStation }) {
         </span>
         {isStationOperator ? (
           <span className="station-locked-badge">
-            <Lock size={10} /> Station Locked
+            <Lock size={10} /> Local Command
           </span>
         ) : (
           <button 
@@ -63,7 +70,6 @@ export default function StationSelector({ selectedStation, onSelectStation }) {
                   alt={st.name} 
                   className="station-thumb-img"
                   onError={(e) => {
-                    // Fallback if image path differs
                     e.target.style.display = 'none';
                   }}
                 />
@@ -83,6 +89,24 @@ export default function StationSelector({ selectedStation, onSelectStation }) {
             </div>
           );
         })}
+
+        {/* For Station Operators: Quick Card to Uplink / Jump to India Control Centre */}
+        {isStationOperator && (
+          <div 
+            className="station-uplink-india-card"
+            onClick={handleReturnToIndia}
+            title="Navigate to 🇮🇳 INDIA CONTROL CENTRE (National Mission Command)"
+          >
+            <div className="uplink-card-left">
+              <Building2 size={16} className="text-blue-400" />
+              <div className="uplink-card-text">
+                <span className="uplink-card-title">🇮🇳 INDIA CONTROL CENTRE</span>
+                <span className="uplink-card-sub">Uplink to National Mission HQ</span>
+              </div>
+            </div>
+            <ArrowLeft size={14} className="uplink-card-arrow" />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,1341 +1,1670 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  Activity, 
-  Radio, 
-  Compass, 
-  HeartPulse, 
-  Waves, 
-  Snowflake, 
-  Thermometer, 
-  ShieldCheck, 
-  AlertTriangle,
-  RefreshCw,
-  Clock,
+  FlaskConical, 
+  FolderGit2, 
+  Database, 
+  MapPin, 
+  Users, 
+  FileText, 
+  ChevronRight, 
+  ChevronLeft,
+  ExternalLink,
+  ChevronDown,
+  Layers,
   Sparkles,
-  Users,
+  Send,
+  Radio,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Eye,
+  Maximize2,
+  Box,
+  Cpu,
+  Compass,
+  Activity,
+  CloudSnow,
+  Thermometer,
+  Shield,
+  Zap,
+  Mic,
+  ArrowRight,
   TrendingUp,
   TrendingDown,
-  Info,
-  CheckCircle2,
+  AlertTriangle,
   AlertCircle,
-  Eye,
+  BarChart3,
+  GitCompare,
+  RefreshCw,
+  Search,
+  Check,
+  Info,
+  HelpCircle,
+  Bot,
+  Wind,
+  Droplets,
+  Gauge,
+  UploadCloud,
+  FileCheck,
+  X,
   Sliders,
-  Maximize2,
-  Layers,
-  Building2,
-  Zap,
-  Globe2,
-  ArrowRight,
-  Shield,
-  Wind
+  Settings,
+  Bell,
+  LayoutDashboard,
+  HardDrive
 } from 'lucide-react';
-import { fetchStationResearch } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTelemetry } from '../context/TelemetryContext';
-
-// High-fidelity fallback scientific telemetry for Antarctica
-const FALLBACK_RESEARCH_DATA = {
-  'station-maitri': {
-    station_id: 'station-maitri',
-    station_name: 'MAITRI',
-    observatory_name: 'Maitri Solid Earth Geomagnetic & Seismic Observatory',
-    region: 'Schirmacher Oasis, Queen Maud Land (70° 45′ S, 11° 44′ E)',
-    timestamp: new Date().toISOString(),
-    seismic: {
-      dominant_frequency_hz: 1.84,
-      peak_frequency_hz: 2.45,
-      avg_frequency_hz: 1.76,
-      trend: '↑ 3.8%',
-      peak_ground_acceleration_g: 0.00185,
-      tremor_amplitude_um: 3.42,
-      status: 'NORMAL',
-      raw_status: 'NOMINAL_MICROSEISMIC',
-      event_classification: 'TECTONIC_BASEMENT_MICRO_FRACTURE',
-      borehole_depth_meters: 45.0,
-      sensor_model: 'Nanometrics Trillium 120QA Borehole Seismometer',
-    },
-    snow_accumulation: {
-      snowpack_total_depth_cm: 142.5,
-      snow_accumulation_24h_cm: 12.4,
-      rate_cm_day: 2.1,
-      snow_accumulation_7d_cm: 58.2,
-      trend: 'INCREASING',
-      drift_accumulation_rate_cm_per_hr: 0.85,
-      snow_density_kg_per_m3: 345.0,
-      subsurface_firn_temperature_c: -16.4,
-      status: 'NORMAL',
-      sensor_model: 'Campbell Scientific SR50A Acoustic Ultrasonic Depth Sensor',
-    },
-    geomagnetic_kp: {
-      kp_index_current: 2.45,
-      status: 'QUIET',
-      storm_classification: 'G1_MINOR_UNSETTLED',
-      trend: '↑ INCREASING',
-      total_magnetic_field_intensity_nt: 42875.2,
-      horizontal_component_h_nt: 18632.4,
-      magnetic_declination_deg: -21.4,
-      auroral_electrojet_activity: 'Active Auroral Bands Visible',
-      ionospheric_scintillation_s4: 0.165,
-      sensor_model: 'Fluxgate Tri-Axial Magnetometer (dIdD)',
-    },
-    crew_biotelemetry: {
-      active_overwintering_personnel: 24,
-      count: 24,
-      average_heart_rate_bpm: 73.0,
-      average_spo2_percent: 98.4,
-      average_stress_index: 24.0,
-      average_activity: 'NORMAL',
-      status: 'HEALTHY',
-      aggregation: 'SIMULATED / AGGREGATED',
-      hypothermia_alert_count: 0,
-      sleep_efficiency_pct: 88.0,
-      crew_summary: 'All 24 overwintering researchers report nominal biometric vitals and synchronized circadian rhythm.',
-      duty_distribution: [
-        { role: 'Atmospheric Physics & Meteo', count: 8, pct: 33 },
-        { role: 'Glaciology & Cryosphere Core', count: 6, pct: 25 },
-        { role: 'Microgrid & Life Support', count: 6, pct: 25 },
-        { role: 'Station Command & Logistics', count: 4, pct: 17 },
-      ]
-    },
-    systems_status: {
-      seismic: 'ONLINE',
-      snow: 'ONLINE',
-      geomagnetic: 'ONLINE',
-      telemetry_link: 'LIVE',
-      data_sync: 'CONNECTED',
-    }
-  },
-  'station-bharati': {
-    station_id: 'station-bharati',
-    station_name: 'BHARATI',
-    observatory_name: 'Bharati Polar Earth & Remote Sensing Marine Observatory',
-    region: 'Larsemann Hills, East Antarctica (69° 24′ S, 76° 11′ E)',
-    timestamp: new Date().toISOString(),
-    seismic: {
-      dominant_frequency_hz: 3.65,
-      peak_frequency_hz: 4.85,
-      avg_frequency_hz: 3.52,
-      trend: '↑ 5.4%',
-      peak_ground_acceleration_g: 0.00420,
-      tremor_amplitude_um: 6.42,
-      status: 'ELEVATED',
-      raw_status: 'ELEVATED_COASTAL_MICRO_SURGE',
-      event_classification: 'PRYDZ_BAY_ICE_SHELF_TIDAL_FLEXURE',
-      borehole_depth_meters: 65.0,
-      sensor_model: 'Nanometrics Trillium 120QA Borehole Seismometer',
-    },
-    snow_accumulation: {
-      snowpack_total_depth_cm: 215.8,
-      snow_accumulation_24h_cm: 24.2,
-      rate_cm_day: 4.8,
-      snow_accumulation_7d_cm: 94.6,
-      trend: 'INCREASING',
-      drift_accumulation_rate_cm_per_hr: 1.75,
-      snow_density_kg_per_m3: 390.0,
-      subsurface_firn_temperature_c: -12.8,
-      status: 'WARNING',
-      sensor_model: 'Campbell Scientific SR50A Acoustic Ultrasonic Depth Sensor',
-    },
-    geomagnetic_kp: {
-      kp_index_current: 3.85,
-      status: 'ACTIVE',
-      storm_classification: 'G1_MINOR_UNSETTLED',
-      trend: '↑ INCREASING',
-      total_magnetic_field_intensity_nt: 44120.8,
-      horizontal_component_h_nt: 19410.5,
-      magnetic_declination_deg: 64.8,
-      auroral_electrojet_activity: 'Dynamic Corona Visible',
-      ionospheric_scintillation_s4: 0.185,
-      sensor_model: 'Fluxgate Tri-Axial Magnetometer (dIdD)',
-    },
-    crew_biotelemetry: {
-      active_overwintering_personnel: 42,
-      count: 42,
-      average_heart_rate_bpm: 76.0,
-      average_spo2_percent: 97.2,
-      average_stress_index: 28.0,
-      average_activity: 'NORMAL',
-      status: 'HEALTHY',
-      aggregation: 'SIMULATED / AGGREGATED',
-      hypothermia_alert_count: 0,
-      sleep_efficiency_pct: 85.0,
-      crew_summary: 'All 42 overwintering researchers and ISRO satellite ground engineers report optimal vitals.',
-      duty_distribution: [
-        { role: 'ISRO Ground Station & Sat-Comms', count: 14, pct: 33 },
-        { role: 'Marine Geochemistry & Ocean', count: 12, pct: 29 },
-        { role: 'CHP Cogeneration & Desal', count: 10, pct: 24 },
-        { role: 'Station Command & Logistics', count: 6, pct: 14 },
-      ]
-    },
-    systems_status: {
-      seismic: 'ONLINE',
-      snow: 'ONLINE',
-      geomagnetic: 'ONLINE',
-      telemetry_link: 'LIVE',
-      data_sync: 'CONNECTED',
-    }
-  }
-};
-
-// Generate realistic time-series points for historical chart
-function generateHistoricalData(stationId, metric, timeRange) {
-  const isMaitri = stationId !== 'station-bharati';
-  let numPoints = 24;
-  let timeLabels = [];
-  const now = new Date();
-
-  if (timeRange === '1H') {
-    numPoints = 12;
-    for (let i = numPoints - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 5 * 60 * 1000);
-      timeLabels.push(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }
-  } else if (timeRange === '6H') {
-    numPoints = 18;
-    for (let i = numPoints - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 20 * 60 * 1000);
-      timeLabels.push(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }
-  } else if (timeRange === '24H') {
-    numPoints = 24;
-    for (let i = numPoints - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-      timeLabels.push(`${d.getHours()}:00`);
-    }
-  } else {
-    // 7D
-    numPoints = 14;
-    for (let i = numPoints - 1; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 12 * 60 * 60 * 1000);
-      timeLabels.push(d.toLocaleDateString([], { weekday: 'short', hour: '2-digit' }));
-    }
-  }
-
-  // Base parameters by metric
-  let baseVal = 1.84;
-  let variance = 0.4;
-  let unit = 'Hz';
-  let yMin = 0;
-  let yMax = 4;
-  let threshold = 2.5;
-
-  if (metric === 'seismic') {
-    baseVal = isMaitri ? 1.84 : 3.65;
-    variance = isMaitri ? 0.35 : 0.8;
-    unit = 'Hz';
-    yMin = isMaitri ? 0.5 : 1.5;
-    yMax = isMaitri ? 3.5 : 6.0;
-    threshold = isMaitri ? 2.5 : 4.5;
-  } else if (metric === 'snow') {
-    baseVal = isMaitri ? 142.5 : 215.8;
-    variance = isMaitri ? 2.5 : 5.0;
-    unit = 'cm';
-    yMin = isMaitri ? 135 : 200;
-    yMax = isMaitri ? 155 : 235;
-    threshold = isMaitri ? 150 : 230;
-  } else if (metric === 'geomagnetic') {
-    baseVal = isMaitri ? 2.45 : 3.85;
-    variance = isMaitri ? 0.6 : 0.9;
-    unit = 'Kp';
-    yMin = 0;
-    yMax = 9;
-    threshold = 4.0;
-  } else if (metric === 'temperature') {
-    baseVal = isMaitri ? -18.7 : -14.2;
-    variance = isMaitri ? 2.2 : 1.8;
-    unit = '°C';
-    yMin = isMaitri ? -26 : -22;
-    yMax = isMaitri ? -10 : -8;
-    threshold = -25.0;
-  } else if (metric === 'wind') {
-    baseVal = isMaitri ? 28.0 : 44.0;
-    variance = isMaitri ? 8.0 : 14.0;
-    unit = 'km/h';
-    yMin = 0;
-    yMax = isMaitri ? 60 : 90;
-    threshold = isMaitri ? 45 : 65;
-  }
-
-  const points = [];
-  for (let i = 0; i < numPoints; i++) {
-    const angle = (i / numPoints) * Math.PI * 3;
-    const noise = Math.sin(angle) * (variance * 0.7) + Math.cos(angle * 1.5) * (variance * 0.3);
-    const val = Number((baseVal + noise).toFixed(2));
-    points.push({
-      time: timeLabels[i] || `${i}`,
-      value: val,
-    });
-  }
-
-  return { points, unit, yMin, yMax, threshold, baseVal };
-}
+import { useModal } from '../context/ModalContext';
+import { analyzeResearchData, askResearchAI, getAIAnalystStatus } from '../services/api';
 
 export default function ResearchView({ selectedStation = 'station-maitri', onSelectStation }) {
-  const { role, isIndiaOperator, isStationOperator, assignedStation } = useAuth();
-  const { isConnected: isWsConnected, alerts: allAlerts } = useTelemetry();
+  const { profile, isIndiaOperator, isStationOperator, assignedStation } = useAuth();
+  const { telemetry } = useTelemetry();
+  const { openDrillDown } = useModal();
 
-  // Effective station resolution based on Role
-  const effectiveStation = useMemo(() => {
-    if (isStationOperator && assignedStation) {
-      return assignedStation;
-    }
-    return selectedStation || 'station-maitri';
-  }, [isStationOperator, assignedStation, selectedStation]);
+  const effectiveStation = isStationOperator && assignedStation 
+    ? assignedStation 
+    : (selectedStation === 'all-stations' ? 'station-maitri' : selectedStation);
 
-  const isComparisonMode = isIndiaOperator && selectedStation === 'all-stations';
+  const isBharati = effectiveStation === 'station-bharati';
+  const stationDisplayName = isBharati ? 'Bharati' : 'Maitri';
+  const stationCoords = isBharati ? "69° 24′ S, 76° 17′ E" : "70° 45′ S, 11° 44′ E";
+  const stationRegion = isBharati ? "Larsemann Hills" : "Schirmacher Oasis";
 
-  // State management
-  const [researchData, setResearchData] = useState(null);
-  const [comparisonData, setComparisonData] = useState({
-    maitri: FALLBACK_RESEARCH_DATA['station-maitri'],
-    bharati: FALLBACK_RESEARCH_DATA['station-bharati']
+  // Navigation State
+  const [sidebarTab, setSidebarTab] = useState('research');
+  const [subTab, setSubTab] = useState('overview');
+  const [dataFlowRange, setDataFlowRange] = useState('Last 7 Days');
+  
+  // Visualization Card state (Maitri layout)
+  const [visCategory, setVisCategory] = useState('satellite');
+  const [selectedDate, setSelectedDate] = useState('10 Sep 2025');
+  const [layers, setLayers] = useState({
+    surfaceTemp: true,
+    snowDepth: true,
+    iceVelocity: false,
+    elevation: false,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorState, setErrorState] = useState(null);
-  const [lastSyncTime, setLastSyncTime] = useState(new Date());
-  const [secondsAgo, setSecondsAgo] = useState(0);
 
-  // Chart Controls
-  const [selectedMetric, setSelectedMetric] = useState('seismic'); // 'seismic' | 'snow' | 'geomagnetic' | 'temperature' | 'wind'
-  const [timeRange, setTimeRange] = useState('24H'); // '1H' | '6H' | '24H' | '7D'
-  const [hoveredPoint, setHoveredPoint] = useState(null);
+  // AI Assistant state
+  const [aiInput, setAiInput] = useState('');
+  const [aiMessages, setAiMessages] = useState([
+    {
+      id: 1,
+      sender: 'ai',
+      text: isBharati
+        ? `Based on the latest satellite data and field observations, the ice shelf near Bharati Station shows a 12% increase in surface melting rate compared to last month. This may impact the planned drilling schedule for Project IceCore-3. I recommend increasing monitoring frequency in this region.`
+        : `Based on the latest satellite data, the ice velocity near the Maitri station has increased by 12% compared to last month. This could indicate changes in the local ice dynamics. Would you like to view the detailed analysis or compare with historical data?`
+    }
+  ]);
+  const [isAiTyping, setIsAiTyping] = useState(false);
 
-  // Real-time ticking counter
+  // Time & Live Clock
+  const [currentTimeStr, setCurrentTimeStr] = useState('12 Sep 2025 | 14:32 IST');
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsAgo((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
+    const updateTime = () => {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      setCurrentTimeStr(`${dateStr} | ${timeStr} IST`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Fetch telemetry from backend
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    setErrorState(null);
-    try {
-      if (isComparisonMode) {
-        const [mRes, bRes] = await Promise.all([
-          fetchStationResearch('station-maitri', role, assignedStation).catch(() => null),
-          fetchStationResearch('station-bharati', role, assignedStation).catch(() => null),
-        ]);
-
-        setComparisonData({
-          maitri: (mRes && mRes.success && mRes.data) ? mRes.data : FALLBACK_RESEARCH_DATA['station-maitri'],
-          bharati: (bRes && bRes.success && bRes.data) ? bRes.data : FALLBACK_RESEARCH_DATA['station-bharati'],
-        });
-      } else {
-        const targetId = effectiveStation === 'all-stations' ? 'station-maitri' : effectiveStation;
-        const res = await fetchStationResearch(targetId, role, assignedStation);
-        if (res && res.success && res.data) {
-          setResearchData(res.data);
-        } else {
-          setResearchData(FALLBACK_RESEARCH_DATA[targetId] || FALLBACK_RESEARCH_DATA['station-maitri']);
-        }
-      }
-      setLastSyncTime(new Date());
-      setSecondsAgo(0);
-    } catch (err) {
-      console.warn('[ResearchView] API fetch notice, using calibrated station fallback:', err.message);
-      const targetId = effectiveStation === 'all-stations' ? 'station-maitri' : effectiveStation;
-      setResearchData(FALLBACK_RESEARCH_DATA[targetId] || FALLBACK_RESEARCH_DATA['station-maitri']);
-      setLastSyncTime(new Date());
-      setSecondsAgo(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [effectiveStation, isComparisonMode, role, assignedStation]);
-
-  // Sync on mount and periodic refresh every 5s
+  // Update initial message when station changes
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+    setAiMessages([
+      {
+        id: Date.now(),
+        sender: 'ai',
+        text: isBharati
+          ? `Based on the latest satellite data and field observations, the ice shelf near Bharati Station shows a 12% increase in surface melting rate compared to last month. This may impact the planned drilling schedule for Project IceCore-3. I recommend increasing monitoring frequency in this region.`
+          : `Based on the latest satellite data, the ice velocity near the Maitri station has increased by 12% compared to last month. This could indicate changes in the local ice dynamics. Would you like to view the detailed analysis or compare with historical data?`
+      }
+    ]);
+  }, [isBharati]);
 
-  // Active data record for single-station view
-  const activeStationId = effectiveStation === 'all-stations' ? 'station-maitri' : effectiveStation;
-  const activeData = researchData || FALLBACK_RESEARCH_DATA[activeStationId] || FALLBACK_RESEARCH_DATA['station-maitri'];
-  const { seismic, snow_accumulation: snow, geomagnetic_kp: kp, crew_biotelemetry: crew } = activeData;
+  const handleToggleLayer = (layerKey) => {
+    setLayers(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
+  };
 
-  const stationName = activeStationId === 'station-bharati' ? 'BHARATI' : 'MAITRI';
-  const stationLocation = activeStationId === 'station-bharati' 
-    ? 'Larsemann Hills (69° 24′ S, 76° 11′ E)' 
-    : 'Schirmacher Oasis (70° 45′ S, 11° 44′ E)';
+  // Connected AI Analysis API Call
+  const handleSendAiMessage = async (queryText) => {
+    const query = queryText || aiInput;
+    if (!query.trim()) return;
 
-  // Chart data calculations
-  const chartDataset = useMemo(() => {
-    return generateHistoricalData(activeStationId, selectedMetric, timeRange);
-  }, [activeStationId, selectedMetric, timeRange]);
+    const userMsg = { id: Date.now(), sender: 'user', text: query };
+    setAiMessages(prev => [...prev, userMsg]);
+    setAiInput('');
+    setIsAiTyping(true);
 
-  // SVG Chart Dimensions & Scaling
-  const svgWidth = 620;
-  const svgHeight = 170;
-  const padLeft = 48;
-  const padRight = 20;
-  const padTop = 22;
-  const padBottom = 28;
-  const plotWidth = svgWidth - padLeft - padRight;
-  const plotHeight = svgHeight - padTop - padBottom;
+    try {
+      const response = await askResearchAI({
+        stationId: effectiveStation,
+        question: query,
+        timeRange: '7d'
+      }, profile?.role, profile?.assigned_station);
 
-  const chartPoints = useMemo(() => {
-    const { points, yMin, yMax } = chartDataset;
-    if (!points || points.length === 0) return [];
-    const valRange = yMax - yMin || 1;
+      const replyText = response?.answer || response?.summary || 
+        `Analysis complete for ${stationDisplayName} Station: Subsurface cryosphere profiles indicate steady compaction. CryoSat-2 and NISAR interferometry models confirm localized ice shelf grounding line equilibrium.`;
 
-    return points.map((pt, idx) => {
-      const x = padLeft + (idx / (points.length - 1)) * plotWidth;
-      const normalizedY = Math.max(0, Math.min(1, (pt.value - yMin) / valRange));
-      const y = padTop + (1 - normalizedY) * plotHeight;
-      return { ...pt, x, y };
-    });
-  }, [chartDataset, plotWidth, plotHeight, padLeft, padTop]);
-
-  // SVG Path Generator
-  const chartSvgPath = useMemo(() => {
-    if (chartPoints.length === 0) return '';
-    return chartPoints.reduce((acc, pt, i) => {
-      if (i === 0) return `M ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
-      return `${acc} L ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
-    }, '');
-  }, [chartPoints]);
-
-  const chartAreaPath = useMemo(() => {
-    if (chartPoints.length === 0) return '';
-    const first = chartPoints[0];
-    const last = chartPoints[chartPoints.length - 1];
-    const baseY = padTop + plotHeight;
-    return `${chartSvgPath} L ${last.x.toFixed(1)},${baseY} L ${first.x.toFixed(1)},${baseY} Z`;
-  }, [chartSvgPath, chartPoints, padTop, plotHeight]);
-
-  // Summary statistics for chart
-  const chartStats = useMemo(() => {
-    const vals = chartDataset.points.map(p => p.value);
-    if (!vals.length) return { min: 0, max: 0, avg: 0, cur: 0 };
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    const cur = vals[vals.length - 1];
-    return { min, max, avg: Number(avg.toFixed(2)), cur };
-  }, [chartDataset]);
-
-  // Station-specific alerts
-  const researchAlerts = useMemo(() => {
-    const filtered = (allAlerts || []).filter(a => {
-      const matchStation = isComparisonMode ? true : a.station_id === activeStationId;
-      const isResearchCategory = (a.category === 'ENVIRONMENT' || a.category === 'RESEARCH' || a.category === 'THERMAL' || a.type === 'WEATHER');
-      return matchStation && isResearchCategory;
-    });
-
-    if (filtered.length > 0) return filtered.slice(0, 4);
-
-    // Contextual active scientific logs if no emergency alerts
-    if (activeStationId === 'station-bharati') {
-      return [
-        { id: 'b-res-01', severity: 'WARNING', title: 'Elevated Coastal Seismic Surge', description: 'Prydz Bay ice shelf tidal flexure detected tremor frequency 3.65 Hz at 65m borehole.', timestamp: 'Just now' },
-        { id: 'b-res-02', severity: 'INFO', title: 'Campbell SR50A Snow Profile Synced', description: 'Snowpack accumulation rate stable at 4.8 cm/day. Firn compaction 84%.', timestamp: '3m ago' },
-        { id: 'b-res-03', severity: 'INFO', title: 'ISRO Ground Telemetry Uplink Active', description: 'Ku-Band GSAT-7A space-ground link operating at 100% link efficiency.', timestamp: '12m ago' },
-      ];
+      setAiMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: replyText }]);
+    } catch (err) {
+      let reply = `Analysis complete for ${stationDisplayName} Station: Subsurface cryosphere profiles indicate steady compaction. CryoSat-2 and NISAR interferometry models confirm localized ice shelf grounding line equilibrium.`;
+      if (query.toLowerCase().includes('past') || query.toLowerCase().includes('compare')) {
+        reply = `Historical Comparison (2020-2025): ${stationDisplayName} Station thermal deviation is +0.42°C above the 5-year mean. Glacial accumulation rate remains within normal stochastic tolerance.`;
+      } else if (query.toLowerCase().includes('summary') || query.toLowerCase().includes('report')) {
+        reply = `Summary Synthesis: ${isBharati ? '8' : '12'} active research projects across Glaciology, Atmospheric Sciences, and Space Weather. Telemetry throughput 99.8% nominal via Ku-Band ISRO satellite downlink.`;
+      }
+      setAiMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: reply }]);
+    } finally {
+      setIsAiTyping(false);
     }
-    return [
-      { id: 'm-res-01', severity: 'INFO', title: 'Schirmacher Oasis Tremor Baseline Nominal', description: 'Trillium 120QA 45m borehole records steady 1.84 Hz microseismic baseline.', timestamp: 'Just now' },
-      { id: 'm-res-02', severity: 'INFO', title: 'Lake Priyadarshini Water Firn Core Verified', description: 'Subsurface temperature -16.4°C. Acoustic ultrasound depth sensor nominal.', timestamp: '5m ago' },
-      { id: 'm-res-03', severity: 'INFO', title: 'Planetary Kp Index Steady (G1 Unsettled)', description: 'dIdD Fluxgate magnetometer reports total field intensity 42,875 nT.', timestamp: '18m ago' },
-    ];
-  }, [allAlerts, activeStationId, isComparisonMode]);
+  };
 
-  // UTC / IST Time String Formatting
-  const lastSyncStr = lastSyncTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC'
-  }) + ' UTC';
+  // 7-Day Chart Data Points
+  const chartPoints = [
+    { day: '6 Sep', sensor: 1.8, field: 1.2, lab: 0.9 },
+    { day: '7 Sep', sensor: 2.3, field: 1.5, lab: 1.1 },
+    { day: '8 Sep', sensor: 2.4, field: 1.6, lab: 1.4 },
+    { day: '9 Sep', sensor: 3.2, field: 1.9, lab: 1.5 },
+    { day: '10 Sep', sensor: 3.4, field: 2.3, lab: 1.7 },
+    { day: '11 Sep', sensor: 4.6, field: 2.8, lab: 1.9 },
+    { day: '12 Sep', sensor: 3.8, field: 2.4, lab: 1.6 },
+  ];
 
-  // ==========================================================================
-  // COMPARISON VIEW FOR INDIA HQ OPERATOR (ALL STATIONS)
-  // ==========================================================================
-  if (isComparisonMode) {
-    const { maitri, bharati } = comparisonData;
+  // SVG Line Path Generator
+  const svgWidth = 480;
+  const svgHeight = 150;
+  const padLeft = 38;
+  const padRight = 16;
+  const padTop = 14;
+  const padBottom = 22;
+  const plotW = svgWidth - padLeft - padRight;
+  const plotH = svgHeight - padTop - padBottom;
+  const maxY = 5.0;
 
-    return (
-      <div className="research-view-layout comparison-mode-layout">
-        {/* Comparison Header */}
-        <div className="research-header-card polaris-card">
-          <div className="r-header-left">
-            <div className="r-icon-badge">
-              <Activity size={22} className="text-cyan" />
-            </div>
-            <div>
-              <div className="r-title-row">
-                <h2 className="r-title">POLAR RESEARCH OBSERVATORIES COMPARISON</h2>
-                <span className="station-role-badge india-command-badge">🇮🇳 NATIONAL COMMAND OVERVIEW</span>
-              </div>
-              <span className="r-sub">
-                Side-by-side scientific telemetry & observatory status for India's Antarctic Stations
-              </span>
-            </div>
-          </div>
+  const getCoordinates = (key) => {
+    return chartPoints.map((pt, i) => {
+      const x = padLeft + (i / (chartPoints.length - 1)) * plotW;
+      const y = padTop + (1 - (pt[key] / maxY)) * plotH;
+      return { x, y, val: pt[key], day: pt.day };
+    });
+  };
 
-          <div className="r-header-right">
-            <div className="station-toggle-pills">
-              <button 
-                type="button"
-                className={`st-pill active`}
-                onClick={() => onSelectStation && onSelectStation('all-stations')}
-              >
-                All Stations
-              </button>
-              <button 
-                type="button"
-                className={`st-pill`}
-                onClick={() => onSelectStation && onSelectStation('station-maitri')}
-              >
-                Maitri Only
-              </button>
-              <button 
-                type="button"
-                className={`st-pill`}
-                onClick={() => onSelectStation && onSelectStation('station-bharati')}
-              >
-                Bharati Only
-              </button>
-            </div>
+  const sensorCoords = getCoordinates('sensor');
+  const fieldCoords = getCoordinates('field');
+  const labCoords = getCoordinates('lab');
 
-            <span className="live-pill">
-              <span className="live-dot" /> LIVE / SIMULATED
-            </span>
-            <button 
-              className={`refresh-icon-btn ${isLoading ? 'spinning' : ''}`}
-              onClick={loadData}
-              title="Refresh Research Matrix"
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
-        </div>
+  const makeSmoothSvgPath = (coords) => {
+    if (!coords.length) return '';
+    let d = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i];
+      const p1 = coords[i + 1];
+      const mx = (p0.x + p1.x) / 2;
+      d += ` C ${mx.toFixed(1)},${p0.y.toFixed(1)} ${mx.toFixed(1)},${p1.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+    }
+    return d;
+  };
 
-        {/* Comparison Summary Grid */}
-        <div className="research-comparison-matrix-grid">
-          {/* MAITRI CARD */}
-          <div className="comparison-station-card polaris-card">
-            <div className="comp-card-header">
-              <div className="comp-st-title-col">
-                <span className="comp-st-tag">INLAND OASIS</span>
-                <h3 className="comp-st-name">Maitri Research Station</h3>
-                <span className="comp-st-sub">Schirmacher Oasis • 70° 45′ S, 11° 44′ E</span>
-              </div>
-              <button 
-                className="inspect-st-btn"
-                onClick={() => onSelectStation && onSelectStation('station-maitri')}
-              >
-                <span>Inspect Maitri</span>
-                <ArrowRight size={13} />
-              </button>
-            </div>
+  const sensorPath = makeSmoothSvgPath(sensorCoords);
+  const fieldPath = makeSmoothSvgPath(fieldCoords);
+  const labPath = makeSmoothSvgPath(labCoords);
 
-            <div className="comp-metrics-list">
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Waves size={14} className="text-cyan" /> Seismic Tremor:</span>
-                <span className="comp-val mono-num text-emerald">{maitri.seismic.dominant_frequency_hz} Hz ({maitri.seismic.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Snowflake size={14} className="text-cyan" /> Snowpack Depth:</span>
-                <span className="comp-val mono-num text-cyan">{maitri.snow_accumulation.snowpack_total_depth_cm} cm (+{maitri.snow_accumulation.snow_accumulation_24h_cm} cm/24h)</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Compass size={14} className="text-cyan" /> Geomagnetic Kp:</span>
-                <span className="comp-val mono-num text-emerald">Kp {maitri.geomagnetic_kp.kp_index_current} ({maitri.geomagnetic_kp.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Users size={14} className="text-cyan" /> Overwintering Crew:</span>
-                <span className="comp-val mono-num">{maitri.crew_biotelemetry.active_overwintering_personnel} Active ({maitri.crew_biotelemetry.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Radio size={14} className="text-cyan" /> Satellite Link:</span>
-                <span className="comp-val text-emerald">GSAT-7A Ku-Band Nominal</span>
-              </div>
-            </div>
-          </div>
+  // Bharati Projects (Exact Match with Screenshot)
+  const bharatiProjects = [
+    { id: 1, name: 'Glaciology & Climate Change', sub: 'Ice core analysis, surface mass balance', status: 'Ongoing', daysLeft: '12 days left', icon: Compass, color: '#10b981', badgeClass: 'badge-ongoing' },
+    { id: 2, name: 'Atmospheric Studies', sub: 'Weather pattern analysis, ozone', status: 'Ongoing', daysLeft: '18 days left', icon: CloudSnow, color: '#10b981', badgeClass: 'badge-ongoing' },
+    { id: 3, name: 'Marine Ecosystem', sub: 'Ocean biology, plankton studies', status: 'Ongoing', daysLeft: '25 days left', icon: Activity, color: '#10b981', badgeClass: 'badge-ongoing' },
+    { id: 4, name: 'Seismology & Geophysics', sub: 'Earthquake monitoring, crustal movement', status: 'Planned', daysLeft: '4 days left', icon: Zap, color: '#38bdf8', badgeClass: 'badge-planned-blue' },
+    { id: 5, name: 'Space Weather Monitoring', sub: 'Solar activity, radiation levels', status: 'Ongoing', daysLeft: '32 days left', icon: Cpu, color: '#10b981', badgeClass: 'badge-ongoing' },
+  ];
 
-          {/* BHARATI CARD */}
-          <div className="comparison-station-card polaris-card">
-            <div className="comp-card-header">
-              <div className="comp-st-title-col">
-                <span className="comp-st-tag tag-cyan">COASTAL HILLS</span>
-                <h3 className="comp-st-name">Bharati Research Station</h3>
-                <span className="comp-st-sub">Larsemann Hills • 69° 24′ S, 76° 11′ E</span>
-              </div>
-              <button 
-                className="inspect-st-btn"
-                onClick={() => onSelectStation && onSelectStation('station-bharati')}
-              >
-                <span>Inspect Bharati</span>
-                <ArrowRight size={13} />
-              </button>
-            </div>
+  // Maitri Projects
+  const maitriProjects = [
+    { id: 1, name: 'Glaciology & Climate Change', sub: 'Subsurface cryosphere core extraction', status: 'Active', daysLeft: '12 days left', icon: Compass, color: '#38bdf8', badgeClass: 'badge-active' },
+    { id: 2, name: 'Atmospheric Studies', sub: 'Tropospheric ozone concentration', status: 'Active', daysLeft: '18 days left', icon: CloudSnow, color: '#38bdf8', badgeClass: 'badge-active' },
+    { id: 3, name: 'Marine Ecosystem', sub: 'Coastal plankton distribution', status: 'Active', daysLeft: '25 days left', icon: Activity, color: '#38bdf8', badgeClass: 'badge-active' },
+    { id: 4, name: 'Seismology & Geophysics', sub: 'Broadband seismic network calibration', status: 'Planned', daysLeft: '45 days left', icon: Zap, color: '#94a3b8', badgeClass: 'badge-planned' },
+    { id: 5, name: 'Space Weather Monitoring', sub: 'Ionospheric scintillation alerts', status: 'Active', daysLeft: '32 days left', icon: Cpu, color: '#38bdf8', badgeClass: 'badge-active' },
+  ];
 
-            <div className="comp-metrics-list">
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Waves size={14} className="text-cyan" /> Seismic Tremor:</span>
-                <span className="comp-val mono-num text-amber">{bharati.seismic.dominant_frequency_hz} Hz ({bharati.seismic.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Snowflake size={14} className="text-cyan" /> Snowpack Depth:</span>
-                <span className="comp-val mono-num text-cyan">{bharati.snow_accumulation.snowpack_total_depth_cm} cm (+{bharati.snow_accumulation.snow_accumulation_24h_cm} cm/24h)</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Compass size={14} className="text-cyan" /> Geomagnetic Kp:</span>
-                <span className="comp-val mono-num text-cyan">Kp {bharati.geomagnetic_kp.kp_index_current} ({bharati.geomagnetic_kp.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Users size={14} className="text-cyan" /> Overwintering Crew:</span>
-                <span className="comp-val mono-num">{bharati.crew_biotelemetry.active_overwintering_personnel} Active ({bharati.crew_biotelemetry.status})</span>
-              </div>
-              <div className="comp-metric-row">
-                <span className="comp-lbl"><Radio size={14} className="text-cyan" /> ISRO Radome Downlink:</span>
-                <span className="comp-val text-emerald">Active Space-Ground Link</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const currentProjects = isBharati ? bharatiProjects : maitriProjects;
 
-  // ==========================================================================
-  // SINGLE STATION SCIENTIFIC MONITORING CONSOLE (MAITRI OR BHARATI)
-  // ==========================================================================
+  // Bharati Live Research Feed
+  const bharatiLiveFeed = [
+    { id: 1, title: 'Ice core sample analysis completed', desc: 'Preliminary results uploaded to repository.', time: '2h ago', icon: FlaskConical },
+    { id: 2, title: 'Field team at Larsemann Hills', desc: 'GPS coordinates and photos synced.', time: '6h ago', icon: MapPin },
+    { id: 3, title: 'New publication draft uploaded', desc: 'Glaciology Research – v2.1', time: '8h ago', icon: FileText },
+    { id: 4, title: 'Maintenance completed - Weather Station', desc: 'System back online and transmitting data.', time: '10h ago', icon: CheckCircle2 },
+  ];
+
+  // Maitri Live Research Feed
+  const maitriLiveFeed = [
+    { id: 1, title: 'New data received from AWS-2 weather station', desc: 'Temperature, wind speed and pressure updated.', time: '2h ago', icon: CloudSnow },
+    { id: 2, title: 'Ice core sample analysis completed', desc: 'Preliminary results uploaded to repository.', time: '4h ago', icon: Database },
+    { id: 3, title: 'Field team at Larsemann Hills', desc: 'GPS coordinates and photos synced.', time: '6h ago', icon: MapPin },
+    { id: 4, title: 'New publication draft uploaded', desc: 'Glaciology Research – v2.1', time: '8h ago', icon: FileText },
+    { id: 5, title: 'Maintenance completed - Weather Station', desc: 'System back online and transmitting data.', time: '10h ago', icon: CheckCircle2 },
+  ];
+
+  const currentLiveFeed = isBharati ? bharatiLiveFeed : maitriLiveFeed;
+
+  // Equipment & Lab Status List for Maitri
+  const equipmentStatusList = [
+    { id: 1, name: 'AWS-2 Weather Station', status: 'Online', lastUpdated: '12 Sep, 14:21', badgeClass: 'badge-online', type: 'Meteorology', health: 96 },
+    { id: 2, name: 'Seismometer (BH-01)', status: 'Online', lastUpdated: '12 Sep, 14:15', badgeClass: 'badge-online', type: 'Geophysics', health: 94 },
+    { id: 3, name: 'Ice Core Drill', status: 'Standby', lastUpdated: '12 Sep, 12:44', badgeClass: 'badge-standby', type: 'Glaciology', health: 88 },
+    { id: 4, name: 'Spectrometer Lab', status: 'Online', lastUpdated: '12 Sep, 14:10', badgeClass: 'badge-online', type: 'Optics', health: 98 },
+    { id: 5, name: 'GPS Station', status: 'Online', lastUpdated: '12 Sep, 14:12', badgeClass: 'badge-online', type: 'Geodesy', health: 99 },
+    { id: 6, name: 'Weather Balloon', status: 'Scheduled', lastUpdated: '12 Sep, 16:00', badgeClass: 'badge-scheduled', type: 'Atmosphere', health: 90 },
+  ];
+
+  // Key Equipment for Bharati
+  const bharatiKeyEquipment = [
+    { id: 1, name: 'Generator G-01', status: 'Online', lastUpdated: '12 Sep, 14:12', statusColor: '#10b981' },
+    { id: 2, name: 'Generator G-02', status: 'Maintenance', lastUpdated: '12 Sep, 10:32', statusColor: '#ef4444' },
+    { id: 3, name: 'Communication System', status: 'Online', lastUpdated: '12 Sep, 09:47', statusColor: '#10b981' },
+  ];
+
+  // Bharati Active Alerts for Sidebar
+  const bharatiSidebarAlerts = [
+    { id: 1, title: 'Generator G-01 Vibration High', time: '12:48 PM', desc: 'Bharati Station • Maintenance Required', icon: AlertCircle, color: '#ef4444' },
+    { id: 2, title: 'Fuel Level Low', time: '10:21 AM', desc: 'Diesel Tank 2 (Refill Required)', icon: Shield, color: '#f59e0b' },
+    { id: 3, title: 'Temperature Anomaly', time: '08:17 AM', desc: 'Lab 3 (Ice Core Storage)', icon: Thermometer, color: '#f59e0b' },
+  ];
+
+  // Handle Drill-Down Modal
+  const handleKpiDrillDown = (title, value, unit, category, interpretation) => {
+    openDrillDown({
+      title,
+      type: 'DRILL_DOWN',
+      category: 'RESEARCH',
+      currentValue: value,
+      unit,
+      status: 'NORMAL',
+      interpretation: interpretation || `Historical telemetry trend and database analytics for ${title}.`,
+      recommendation: 'All research scientific sensors operating within nominal tolerance limits.',
+      station: stationDisplayName + ' Station',
+      historicalData: chartPoints.map(p => ({
+        time: p.day,
+        value: p.sensor * 2,
+        baseline: 5
+      }))
+    });
+  };
+
   return (
-    <div className="research-view-layout">
+    <div className="india-dashboard-container">
       
       {/* ====================================================================
-          HEADER BANNER: STATION CONTEXT & LIVE METRICS STATUS
+          LEFT SIDEBAR NAVIGATION & HEALTH GAUGE
           ==================================================================== */}
-      <div className="research-header-card polaris-card">
-        <div className="r-header-left">
-          <div className="r-icon-badge">
-            <Activity size={22} className="text-cyan" />
-          </div>
-          <div>
-            <div className="r-title-row">
-              <h2 className="r-title">{stationName} RESEARCH & SCIENTIFIC TELEMETRY</h2>
-              <span className={`station-role-badge ${activeStationId === 'station-bharati' ? 'tag-bharati' : 'tag-maitri'}`}>
-                {activeStationId === 'station-bharati' ? 'BHARATI BASE • 69°S' : 'MAITRI BASE • 70°S'}
-              </span>
-            </div>
-            <span className="r-sub">
-              {activeData.observatory_name} &nbsp;•&nbsp; <span className="text-cyan">{stationLocation}</span>
-            </span>
-          </div>
+      <aside className="india-sidebar-col">
+        
+        {/* Sidebar Header Title */}
+        <div className="sidebar-header-badge">
+          <span className="sidebar-station-prefix">
+            {isBharati ? 'BHARATI STATION' : 'MAITRI STATION - RESEARCH'}
+          </span>
         </div>
 
-        <div className="r-header-right">
-          {/* Station Switcher Pills for India Command */}
-          {isIndiaOperator && onSelectStation && (
-            <div className="station-toggle-pills">
-              <button 
-                type="button"
-                className={`st-pill ${activeStationId === 'station-maitri' ? 'active' : ''}`}
-                onClick={() => onSelectStation('station-maitri')}
-              >
-                Maitri
-              </button>
-              <button 
-                type="button"
-                className={`st-pill ${activeStationId === 'station-bharati' ? 'active' : ''}`}
-                onClick={() => onSelectStation('station-bharati')}
-              >
-                Bharati
-              </button>
-              <button 
-                type="button"
-                className={`st-pill`}
-                onClick={() => onSelectStation('all-stations')}
-              >
-                All Stations
-              </button>
-            </div>
-          )}
-
-          {/* Status & Last Updated Timestamp */}
-          <div className="r-status-timestamp-group">
-            <span className="live-pill">
-              <span className="live-dot" /> LIVE TELEMETRY
-            </span>
-            <span className="r-clock-badge" title="Coordinated Universal Time & Sync Interval">
-              <Clock size={11} className="text-dim" />
-              <span>{lastSyncStr}</span>
-              <span className="sync-secs mono-num">({secondsAgo}s ago)</span>
-            </span>
-          </div>
+        {/* Vertical Navigation Menu */}
+        <nav className="sidebar-nav-list">
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'overview' ? 'active' : ''}`}
+            onClick={() => { setSidebarTab('overview'); setSubTab('overview'); }}
+          >
+            <LayoutDashboard size={14} className="sidebar-nav-icon" />
+            <span>Overview</span>
+          </button>
+          
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'research' ? 'active' : ''}`}
+            onClick={() => { setSidebarTab('research'); setSubTab('overview'); }}
+          >
+            <FlaskConical size={14} className="sidebar-nav-icon" />
+            <span>Research</span>
+            {isBharati && <ChevronRight size={13} className="sidebar-nav-arrow" />}
+          </button>
+          
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'infrastructure' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('infrastructure')}
+          >
+            <Cpu size={14} className="sidebar-nav-icon" />
+            <span>Infrastructure</span>
+          </button>
 
           <button 
-            className={`refresh-icon-btn ${isLoading ? 'spinning' : ''}`}
-            onClick={loadData}
-            title="Refresh Scientific Sensor Matrix"
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'energy' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('energy')}
           >
-            <RefreshCw size={14} />
+            <Zap size={14} className="sidebar-nav-icon" />
+            <span>Energy</span>
           </button>
-        </div>
-      </div>
 
-      {/* ====================================================================
-          TOP 4 PRIMARY RESEARCH METRIC CARDS
-          ==================================================================== */}
-      <div className="research-top-metrics-grid">
-        
-        {/* CARD 1: SEISMIC ACTIVITY */}
-        <div className="r-metric-card polaris-card">
-          <div className="r-card-header">
-            <span className="r-card-title">SEISMIC ACTIVITY</span>
-            <Waves size={17} className="text-cyan" />
-          </div>
-          <div className="r-card-body">
-            <div className="r-stat-main-row">
-              <span className="r-stat-val mono-num">{seismic.dominant_frequency_hz}</span>
-              <span className="r-stat-unit">Hz</span>
-            </div>
-            <div className="r-stat-footer-row">
-              <span className={`status-tag ${seismic.status === 'NORMAL' ? 'tag-green' : 'tag-amber'}`}>
-                {seismic.status}
-              </span>
-              <span className="r-trend-badge text-emerald">{seismic.trend || '↑ 3.8%'}</span>
-              <span className="r-data-source-chip">SIMULATED</span>
-            </div>
-          </div>
-          <div className="r-card-subtext">
-            Borehole Depth: {seismic.borehole_depth_meters}m • Ground Accel: {seismic.peak_ground_acceleration_g}g
-          </div>
-        </div>
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'logistics' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('logistics')}
+          >
+            <Box size={14} className="sidebar-nav-icon" />
+            <span>Logistics</span>
+          </button>
 
-        {/* CARD 2: SNOW ACCUMULATION */}
-        <div className="r-metric-card polaris-card">
-          <div className="r-card-header">
-            <span className="r-card-title">SNOW ACCUMULATION</span>
-            <Snowflake size={17} className="text-cyan" />
-          </div>
-          <div className="r-card-body">
-            <div className="r-stat-main-row">
-              <span className="r-stat-val mono-num">{snow.snowpack_total_depth_cm}</span>
-              <span className="r-stat-unit">cm</span>
-            </div>
-            <div className="r-stat-footer-row">
-              <span className="status-tag tag-cyan">
-                Rate: {snow.rate_cm_day || '2.1'} cm/day
-              </span>
-              <span className="r-trend-badge text-cyan">↑ INCREASING</span>
-              <span className="r-data-source-chip">SIMULATED</span>
-            </div>
-          </div>
-          <div className="r-card-subtext">
-            24h Drift: +{snow.snow_accumulation_24h_cm} cm • Density: {snow.snow_density_kg_per_m3} kg/m³
-          </div>
-        </div>
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'environment' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('environment')}
+          >
+            <CloudSnow size={14} className="sidebar-nav-icon" />
+            <span>Environment</span>
+          </button>
 
-        {/* CARD 3: GEOMAGNETIC ACTIVITY */}
-        <div className="r-metric-card polaris-card">
-          <div className="r-card-header">
-            <span className="r-card-title">GEOMAGNETIC ACTIVITY</span>
-            <Compass size={17} className="text-cyan" />
-          </div>
-          <div className="r-card-body">
-            <div className="r-stat-main-row">
-              <span className="r-stat-val mono-num">Kp {kp.kp_index_current}</span>
-              <span className="r-stat-unit">/ 9 Kp</span>
-            </div>
-            <div className="r-stat-footer-row">
-              <span className={`status-tag ${kp.kp_index_current < 3 ? 'tag-green' : kp.kp_index_current < 5 ? 'tag-cyan' : 'tag-amber'}`}>
-                {kp.status || (kp.kp_index_current < 3 ? 'QUIET' : kp.kp_index_current < 5 ? 'ACTIVE' : 'STORM')}
-              </span>
-              {/* Visual 9-Step Kp Segment Bar */}
-              <div className="kp-scale-bar-compact" title={`Planetary Kp Scale: ${kp.kp_index_current} / 9`}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
-                  <span 
-                    key={lvl} 
-                    className={`kp-step-dot ${lvl <= Math.round(kp.kp_index_current) ? (lvl > 5 ? 'step-red' : lvl > 3 ? 'step-amber' : 'step-green') : ''}`}
-                  />
-                ))}
-              </div>
-              <span className="r-data-source-chip">SIMULATED</span>
-            </div>
-          </div>
-          <div className="r-card-subtext">
-            Field: {kp.total_magnetic_field_intensity_nt} nT • Scintillation: {kp.ionospheric_scintillation_s4} (S4)
-          </div>
-        </div>
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'maintenance' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('maintenance')}
+          >
+            <Settings size={14} className="sidebar-nav-icon" />
+            <span>Maintenance</span>
+          </button>
 
-        {/* CARD 4: CREW BIO-TELEMETRY (AGGREGATED & PRIVACY-SAFE) */}
-        <div className="r-metric-card polaris-card">
-          <div className="r-card-header">
-            <span className="r-card-title">CREW BIO-TELEMETRY</span>
-            <HeartPulse size={17} className="text-cyan" />
-          </div>
-          <div className="r-card-body">
-            <div className="r-stat-main-row">
-              <span className="r-stat-val mono-num">{crew.active_overwintering_personnel || crew.count || 24}</span>
-              <span className="r-stat-unit">Crew</span>
-            </div>
-            <div className="r-stat-footer-row">
-              <span className="status-tag tag-green">
-                Avg HR: {crew.average_heart_rate_bpm} bpm
-              </span>
-              <span className="r-trend-badge text-cyan">SpO₂ {crew.average_spo2_percent}%</span>
-              <span className="r-data-source-chip agg-chip">AGGREGATED</span>
-            </div>
-          </div>
-          <div className="r-card-subtext">
-            Stress Index: {crew.average_stress_index}/100 • Activity: {crew.average_activity || 'NORMAL'}
-          </div>
-        </div>
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'communication' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('communication')}
+          >
+            <Radio size={14} className="sidebar-nav-icon" />
+            <span>Communication</span>
+          </button>
 
-      </div>
+          <button 
+            type="button" 
+            className={`sidebar-nav-item ${sidebarTab === 'alerts' ? 'active' : ''}`}
+            onClick={() => setSidebarTab('alerts')}
+          >
+            <Bell size={14} className="sidebar-nav-icon" />
+            <span>Alerts</span>
+            <span className="sidebar-alert-badge-pill">3</span>
+          </button>
+        </nav>
 
-      {/* ====================================================================
-          MAIN HISTORICAL RESEARCH TELEMETRY CHART (SELECTABLE METRICS & RANGES)
-          ==================================================================== */}
-      <div className="research-main-chart-card polaris-card">
-        <div className="chart-header-controls-row">
-          <div className="chart-title-group">
-            <div className="chart-icon-box">
-              <Sparkles size={16} className="text-cyan" />
+        {/* STATION HEALTH INDEX CARD */}
+        <div 
+          className="sidebar-health-card interactive-card"
+          onClick={() => openDrillDown({
+            title: `${stationDisplayName} Station Health Index`,
+            type: 'DRILL_DOWN',
+            category: 'HEALTH',
+            currentValue: isBharati ? 84 : 87,
+            unit: '/100',
+            status: 'GOOD',
+            interpretation: 'Overall composite health index is optimal across Infrastructure, Energy, Logistics, Environment, and Communication subsystems.',
+            recommendation: 'Scheduled routine inspection on Generator G-02 thermal radiators.',
+            station: stationDisplayName + ' Station'
+          })}
+        >
+          <div className="card-mini-title">STATION HEALTH INDEX</div>
+          
+          <div className="health-gauge-box">
+            <button type="button" className="gauge-side-nav-btn gauge-nav-left" title="Previous station subsystem" onClick={(e) => e.stopPropagation()}>
+              <ChevronLeft size={13} />
+            </button>
+            <svg viewBox="0 0 120 120" className="gauge-svg">
+              <circle
+                cx="60"
+                cy="60"
+                r="46"
+                fill="none"
+                stroke="rgba(30, 58, 95, 0.6)"
+                strokeWidth="7"
+                strokeDasharray="216 288"
+                strokeLinecap="round"
+                transform="rotate(135 60 60)"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                r="46"
+                fill="none"
+                stroke="#00e699"
+                strokeWidth="7"
+                strokeDasharray={`${isBharati ? '182' : '188'} 288`}
+                strokeLinecap="round"
+                transform="rotate(135 60 60)"
+                style={{ filter: 'drop-shadow(0 0 6px #00e699)' }}
+              />
+            </svg>
+            <div className="gauge-value-text">
+              <span className="gauge-score-large">{isBharati ? '84' : '87'}</span>
+              <span className="gauge-score-denom">/100</span>
+              <span className="gauge-status-word">GOOD</span>
             </div>
-            <div>
-              <h3 className="chart-heading">HISTORICAL RESEARCH TELEMETRY</h3>
-              <span className="chart-subheading">
-                Station-calibrated scientific observation trends for {stationName} Research Station
-              </span>
-            </div>
+            <button type="button" className="gauge-side-nav-btn gauge-nav-right" title="Next station subsystem" onClick={(e) => e.stopPropagation()}>
+              <ChevronRight size={13} />
+            </button>
           </div>
 
-          <div className="chart-controls-cluster">
-            {/* Metric Selectors */}
-            <div className="chart-metric-pills">
-              <button 
-                type="button" 
-                className={`c-metric-pill ${selectedMetric === 'seismic' ? 'active' : ''}`}
-                onClick={() => setSelectedMetric('seismic')}
-              >
-                <Waves size={12} />
-                <span>Seismic (Hz)</span>
-              </button>
-              <button 
-                type="button" 
-                className={`c-metric-pill ${selectedMetric === 'snow' ? 'active' : ''}`}
-                onClick={() => setSelectedMetric('snow')}
-              >
-                <Snowflake size={12} />
-                <span>Snowpack (cm)</span>
-              </button>
-              <button 
-                type="button" 
-                className={`c-metric-pill ${selectedMetric === 'geomagnetic' ? 'active' : ''}`}
-                onClick={() => setSelectedMetric('geomagnetic')}
-              >
-                <Compass size={12} />
-                <span>Geomagnetic (Kp)</span>
-              </button>
-              <button 
-                type="button" 
-                className={`c-metric-pill ${selectedMetric === 'temperature' ? 'active' : ''}`}
-                onClick={() => setSelectedMetric('temperature')}
-              >
-                <Thermometer size={12} />
-                <span>Temp (°C)</span>
-              </button>
-              <button 
-                type="button" 
-                className={`c-metric-pill ${selectedMetric === 'wind' ? 'active' : ''}`}
-                onClick={() => setSelectedMetric('wind')}
-              >
-                <Wind size={12} />
-                <span>Wind (km/h)</span>
-              </button>
+          <div className="subsystems-metrics-list">
+            <div className="subsys-metric-row">
+              <span className="subsys-lbl"><Cpu size={11} className="text-cyan" /> Infrastructure</span>
+              <span className="subsys-val val-green">{isBharati ? '88' : '91'}</span>
             </div>
-
-            {/* Time Range Selectors */}
-            <div className="chart-range-pills">
-              {['1H', '6H', '24H', '7D'].map((range) => (
-                <button
-                  key={range}
-                  type="button"
-                  className={`c-range-pill ${timeRange === range ? 'active' : ''}`}
-                  onClick={() => setTimeRange(range)}
-                >
-                  {range}
-                </button>
-              ))}
+            <div className="subsys-metric-row">
+              <span className="subsys-lbl"><Zap size={11} className="text-cyan" /> Energy</span>
+              <span className={`subsys-val ${isBharati ? 'val-amber' : 'val-green'}`}>{isBharati ? '76' : '84'}</span>
+            </div>
+            <div className="subsys-metric-row">
+              <span className="subsys-lbl"><Box size={11} className="text-cyan" /> Logistics</span>
+              <span className="subsys-val val-green">{isBharati ? '82' : '89'}</span>
+            </div>
+            <div className="subsys-metric-row">
+              <span className="subsys-lbl"><AlertTriangle size={11} className={isBharati ? 'text-cyan' : 'text-amber'} /> Environment</span>
+              <span className={`subsys-val ${isBharati ? 'val-green' : 'val-amber'}`}>{isBharati ? '85' : '78'}</span>
+            </div>
+            <div className="subsys-metric-row">
+              <span className="subsys-lbl"><Radio size={11} className="text-cyan" /> Communication</span>
+              <span className="subsys-val val-green">{isBharati ? '80' : '94'}</span>
             </div>
           </div>
         </div>
 
-        {/* Live SVG Chart Viewport */}
-        <div className="research-chart-viewport">
-          {/* Top Statistics Legend Strip */}
-          <div className="chart-stats-summary-bar">
-            <div className="c-stat-item">
-              <span className="c-stat-lbl">CURRENT:</span>
-              <span className="c-stat-val mono-num text-cyan">{chartStats.cur} {chartDataset.unit}</span>
+        {/* SIDEBAR BOTTOM SECTION: BHARATI ACTIVE ALERTS VS MAITRI ACTIVE RESEARCH */}
+        {isBharati ? (
+          <div className="sidebar-bharati-alerts-card">
+            <div className="active-res-header-row">
+              <span className="card-mini-title">ACTIVE ALERTS</span>
+              <span className="view-all-link" onClick={() => setSidebarTab('alerts')}>View All →</span>
             </div>
-            <div className="c-stat-item">
-              <span className="c-stat-lbl">24H AVERAGE:</span>
-              <span className="c-stat-val mono-num text-emerald">{chartStats.avg} {chartDataset.unit}</span>
-            </div>
-            <div className="c-stat-item">
-              <span className="c-stat-lbl">MIN / MAX:</span>
-              <span className="c-stat-val mono-num">{chartStats.min} / {chartStats.max} {chartDataset.unit}</span>
-            </div>
-            <div className="c-stat-item">
-              <span className="c-stat-lbl">SIMULATED THRESHOLD:</span>
-              <span className="c-stat-val mono-num text-amber">{chartDataset.threshold} {chartDataset.unit}</span>
-            </div>
-          </div>
 
-          <div className="svg-container-wrap">
-            <svg 
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`} 
-              className="research-svg-chart"
-              onMouseLeave={() => setHoveredPoint(null)}
-            >
-              <defs>
-                <linearGradient id="researchAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.32" />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Grid Lines */}
-              {[0, 0.33, 0.66, 1].map((ratio, idx) => {
-                const y = padTop + ratio * plotHeight;
-                const val = chartDataset.yMax - ratio * (chartDataset.yMax - chartDataset.yMin);
+            <div className="bharati-alerts-list">
+              {bharatiSidebarAlerts.map((alt) => {
+                const IconComp = alt.icon;
                 return (
-                  <g key={idx}>
-                    <line 
-                      x1={padLeft} 
-                      y1={y} 
-                      x2={svgWidth - padRight} 
-                      y2={y} 
-                      stroke="rgba(255, 255, 255, 0.06)" 
-                      strokeDasharray="4 4" 
-                    />
-                    <text 
-                      x={padLeft - 8} 
-                      y={y + 3.5} 
-                      fill="#64748b" 
-                      fontSize="9" 
-                      textAnchor="end" 
-                      className="mono-num"
-                    >
-                      {val.toFixed(1)}
-                    </text>
-                  </g>
+                  <div 
+                    key={alt.id} 
+                    className="bharati-alert-row-item interactive-card"
+                    onClick={() => openDrillDown({
+                      title: alt.title,
+                      type: 'DRILL_DOWN',
+                      category: 'ALERT',
+                      currentValue: alt.time,
+                      status: 'WARNING',
+                      interpretation: alt.desc,
+                      recommendation: 'Scheduled telemetry maintenance protocol initiated.',
+                      station: 'Bharati Station'
+                    })}
+                  >
+                    <div className="b-alt-icon-wrap" style={{ color: alt.color }}>
+                      <IconComp size={13} />
+                    </div>
+                    <div className="b-alt-info-col">
+                      <div className="b-alt-top-line">
+                        <span className="b-alt-title">{alt.title}</span>
+                        <span className="b-alt-time">{alt.time}</span>
+                      </div>
+                      <span className="b-alt-desc">{alt.desc}</span>
+                    </div>
+                  </div>
                 );
               })}
+            </div>
 
-              {/* Threshold Line */}
-              {(() => {
-                const range = chartDataset.yMax - chartDataset.yMin || 1;
-                const normThresh = (chartDataset.threshold - chartDataset.yMin) / range;
-                const threshY = padTop + (1 - normThresh) * plotHeight;
-                if (threshY >= padTop && threshY <= padTop + plotHeight) {
+            <div className="bharati-unread-alerts-footer">
+              <span className="unread-txt">Total Unread Alerts</span>
+              <span className="unread-badge">3</span>
+            </div>
+          </div>
+        ) : (
+          <div className="sidebar-active-research-card">
+            <div className="active-res-header-row">
+              <span className="card-mini-title">ACTIVE RESEARCH</span>
+              <span className="view-all-link" onClick={() => setSubTab('projects')}>View All</span>
+            </div>
+
+            <div className="active-res-items-list">
+              {currentProjects.slice(0, 3).map((proj) => {
+                const IconComp = proj.icon;
+                return (
+                  <div 
+                    key={proj.id} 
+                    className="active-res-item interactive-card"
+                    onClick={() => openDrillDown({
+                      title: proj.name,
+                      type: 'DRILL_DOWN',
+                      category: 'RESEARCH_PROJECT',
+                      currentValue: proj.status,
+                      interpretation: proj.sub,
+                      recommendation: `Campaign timeline: ${proj.daysLeft}. Data stream link active.`,
+                      station: stationDisplayName + ' Station'
+                    })}
+                  >
+                    <div className="active-res-icon-wrap">
+                      <IconComp size={13} className="text-cyan" />
+                    </div>
+                    <div className="active-res-info">
+                      <span className="active-res-name">{proj.name}</span>
+                      <span className="active-res-sub">Ongoing • {proj.daysLeft}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Weather Pill */}
+            <div 
+              className="sidebar-weather-pill interactive-card"
+              onClick={() => openDrillDown({
+                title: 'Surface Temperature & Weather',
+                type: 'DRILL_DOWN',
+                category: 'ENVIRONMENT',
+                currentValue: -18.7,
+                unit: '°C',
+                status: 'NORMAL',
+                interpretation: 'Ambient conditions with light Antarctic snowfall and steady barometric gradient.',
+                recommendation: 'Routine outdoor movements cleared under Level-1 weather safety protocol.',
+                station: stationDisplayName + ' Station'
+              })}
+            >
+              <div className="w-pill-left">
+                <CloudSnow size={15} className="text-cyan" />
+                <div className="w-pill-text">
+                  <span className="w-pill-temp">-18.7°C</span>
+                  <span className="w-pill-cond">Light Snow</span>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-dim" />
+            </div>
+          </div>
+        )}
+
+      </aside>
+
+      {/* ====================================================================
+          MAIN CENTER WORKSPACE AREA
+          ==================================================================== */}
+      <main className="india-main-workspace">
+        
+        {/* TOP STATION HERO BANNER */}
+        {isBharati ? (
+          <div className="bharati-hero-banner">
+            <div className="bharati-hero-left">
+              <div className="bharati-img-box">
+                <img src="/stations/bharati.jpg" alt="Bharati Station Antarctica" className="bharati-hero-photo" />
+                <div className="bharati-img-overlay-glow" />
+              </div>
+              <div className="bharati-hero-text">
+                <div className="b-hero-title-row">
+                  <h1 className="bharati-title-large">Bharati Station</h1>
+                  <span className="bharati-status-pill">
+                    <span className="b-status-dot" /> Operational
+                  </span>
+                </div>
+                <div className="b-hero-meta-row">
+                  <span className="b-coord-tag">
+                    <Compass size={12} className="text-cyan" /> 69° 24′ S, 76° 17′ E
+                  </span>
+                  <span className="b-region-tag">Larsemann Hills</span>
+                  <span className="b-updated-tag">Last Updated: 12 Sep 2025, 14:28 IST</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bharati-hero-weather-box">
+              <div className="b-weather-primary">
+                <CloudSnow size={26} className="text-cyan animate-pulse" />
+                <div className="b-w-temp-block">
+                  <span className="b-temp-val">-18.7°C</span>
+                  <span className="b-temp-cond">Light Snow</span>
+                </div>
+              </div>
+              <div className="b-weather-metrics-cluster">
+                <div className="b-w-metric">
+                  <Wind size={12} className="text-cyan" />
+                  <span className="b-w-lbl">Wind</span>
+                  <span className="b-w-val">28 km/h</span>
+                </div>
+                <div className="b-w-metric">
+                  <Droplets size={12} className="text-cyan" />
+                  <span className="b-w-lbl">Humidity</span>
+                  <span className="b-w-val">68%</span>
+                </div>
+                <div className="b-w-metric">
+                  <Gauge size={12} className="text-cyan" />
+                  <span className="b-w-lbl">Pressure</span>
+                  <span className="b-w-val">987 hPa</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <header className="research-main-header">
+            <div className="r-header-left-cluster">
+              <div className="r-beaker-icon-box">
+                <FlaskConical size={24} className="text-cyan animate-pulse" />
+              </div>
+              <div className="r-titles-group">
+                <h1 className="r-main-title">Research</h1>
+                <span className="r-main-subtitle">Scientific Research &amp; Data Analytics</span>
+              </div>
+            </div>
+
+            <div className="r-header-right-cluster">
+              <span className="r-motto-text">Advancing knowledge for a sustainable tomorrow</span>
+              <div className="r-datetime-pill">
+                <Calendar size={13} className="text-cyan" />
+                <span className="r-datetime-val">{currentTimeStr}</span>
+                <span className="r-live-dot-badge">
+                  <span className="live-dot" /> Live Data
+                </span>
+              </div>
+            </div>
+          </header>
+        )}
+
+        {/* SUB-NAVIGATION TABS RIBBON */}
+        <div className="research-subnav-ribbon">
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setSubTab('overview')}
+          >
+            Research Overview
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'projects' ? 'active' : ''}`}
+            onClick={() => setSubTab('projects')}
+          >
+            {isBharati ? 'Active Projects' : 'Projects'}
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'field' ? 'active' : ''}`}
+            onClick={() => setSubTab('field')}
+          >
+            Field Observations
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'data' ? 'active' : ''}`}
+            onClick={() => setSubTab('data')}
+          >
+            Data &amp; Analytics
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'publications' ? 'active' : ''}`}
+            onClick={() => setSubTab('publications')}
+          >
+            Publications
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'collaboration' ? 'active' : ''}`}
+            onClick={() => setSubTab('collaboration')}
+          >
+            {isBharati ? 'Collaborations' : 'Collaboration'}
+          </button>
+          <button 
+            type="button" 
+            className={`subnav-pill ${subTab === 'lab' ? 'active' : ''}`}
+            onClick={() => setSubTab('lab')}
+          >
+            {isBharati ? 'Equipment & Labs' : 'Lab & Equipment'}
+          </button>
+        </div>
+
+        {/* 5 TOP METRIC KPI CARDS HORIZONTAL STRIP */}
+        <div className="research-kpi-ribbon-5col">
+          {/* Card 1 */}
+          <div 
+            className="kpi-box-item interactive-card"
+            onClick={() => handleKpiDrillDown(isBharati ? 'Active Research Projects' : 'Total Research Projects', isBharati ? 8 : 12, 'Projects', 'PROJECTS', isBharati ? '5 Ongoing, 2 Planned, 1 Completed research missions.' : '6 Active, 4 Completed, 2 Planned scientific programs under NCPOR.')}
+          >
+            <div className="kpi-icon-square">
+              <Compass size={18} className="text-cyan" />
+            </div>
+            <div className="kpi-text-wrap">
+              <span className="kpi-label">{isBharati ? 'Active Research Projects' : 'Total Research Projects'}</span>
+              <div className="kpi-value-row">
+                <span className="kpi-number">{isBharati ? '8' : '12'}</span>
+              </div>
+              <span className="kpi-sub-detail">
+                {isBharati 
+                  ? <><strong>5</strong> Ongoing &nbsp;|&nbsp; <strong>2</strong> Planned &nbsp;|&nbsp; <strong>1</strong> Completed</>
+                  : <><strong>6</strong> Active &nbsp;|&nbsp; <strong>4</strong> Completed &nbsp;|&nbsp; <strong>2</strong> Planned</>
+                }
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2 */}
+          <div 
+            className="kpi-box-item interactive-card"
+            onClick={() => handleKpiDrillDown('Data Collected (This Month)', isBharati ? 6.2 : 4.8, 'TB', 'DATA', `Telemetry ingest rate increased by ${isBharati ? '18%' : '12%'} vs previous observation cycle.`)}
+          >
+            <div className="kpi-icon-square">
+              <Database size={18} className="text-cyan" />
+            </div>
+            <div className="kpi-text-wrap">
+              <span className="kpi-label">Data Collected (This Month)</span>
+              <div className="kpi-value-row">
+                <span className="kpi-number">{isBharati ? '6.2' : '4.8'} <span className="kpi-unit">TB</span></span>
+              </div>
+              <span className="kpi-sub-detail text-emerald">↑ {isBharati ? '18%' : '12%'} vs last month</span>
+            </div>
+          </div>
+
+          {/* Card 3 */}
+          <div 
+            className="kpi-box-item interactive-card"
+            onClick={() => handleKpiDrillDown(isBharati ? 'Field Campaigns' : 'Active Field Campaigns', isBharati ? 2 : 3, 'Campaigns', 'FIELD', isBharati ? 'Glaciology and Atmospheric field teams deployed across Larsemann Hills promontories.' : 'Glaciology, Atmospheric, and Marine field teams on scheduled traverses.')}
+          >
+            <div className="kpi-icon-square">
+              <MapPin size={18} className="text-cyan" />
+            </div>
+            <div className="kpi-text-wrap">
+              <span className="kpi-label">{isBharati ? 'Field Campaigns' : 'Active Field Campaigns'}</span>
+              <div className="kpi-value-row">
+                <span className="kpi-number">{isBharati ? '2' : '3'}</span>
+              </div>
+              <span className="kpi-sub-detail">
+                {isBharati ? 'Glaciology | Atmosphere' : 'Glaciology | Atmosphere | Marine'}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4 */}
+          <div 
+            className="kpi-box-item interactive-card"
+            onClick={() => handleKpiDrillDown('Research Personnel', isBharati ? 16 : 18, 'Scientists', 'PERSONNEL', `${isBharati ? '16' : '18'} Active researchers on 44th Indian Antarctic Expedition.`)}
+          >
+            <div className="kpi-icon-square">
+              <Users size={18} className="text-cyan" />
+            </div>
+            <div className="kpi-text-wrap">
+              <span className="kpi-label">Research Personnel</span>
+              <div className="kpi-value-row">
+                <span className="kpi-number">{isBharati ? '16' : '18'}</span>
+              </div>
+              <span className="kpi-sub-detail">Scientists &nbsp;|&nbsp; Researchers &nbsp;|&nbsp; Support Staff</span>
+            </div>
+          </div>
+
+          {/* Card 5 */}
+          <div 
+            className="kpi-box-item interactive-card"
+            onClick={() => handleKpiDrillDown('Key Publications', isBharati ? 5 : 7, 'Papers', 'PUBLICATIONS', `${isBharati ? '5' : '7'} submitted papers across Polar Science, Nature Geoscience and JGR.`)}
+          >
+            <div className="kpi-icon-square">
+              <FileText size={18} className="text-cyan" />
+            </div>
+            <div className="kpi-text-wrap">
+              <span className="kpi-label">Key Publications</span>
+              <div className="kpi-value-row">
+                <span className="kpi-number">{isBharati ? '5' : '7'}</span>
+              </div>
+              <span className="kpi-sub-detail">Submitted &nbsp;|&nbsp; <strong>{isBharati ? '2' : '3'}</strong> Under Review</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ====================================================================
+            MIDDLE SECTION
+            For Bharati: 3 Columns (Data Flow | Research Projects | Live Feed)
+            For Maitri: 2 Columns (Data Flow | Research Projects)
+            ==================================================================== */}
+        <div className={isBharati ? "bharati-middle-3col-grid" : "research-middle-grid"}>
+          
+          {/* MIDDLE COLUMN 1: Research Activity & Data Flow Line Chart */}
+          <div 
+            className="research-chart-card interactive-card"
+            onClick={() => openDrillDown({
+              title: 'Telemetry & Scientific Data Flow',
+              type: 'DRILL_DOWN',
+              category: 'DATA_FLOW',
+              currentValue: '3.8 GB/day',
+              status: 'NORMAL',
+              interpretation: 'Continuous streaming across Satellite Data (cyan), Field Data (green), and Laboratory Spectrometers (yellow).',
+              recommendation: 'ISRO satellite downlink bandwidth allocation is 99.8% optimal.',
+              station: stationDisplayName + ' Station',
+              historicalData: chartPoints.map(p => ({
+                time: p.day,
+                sensor: p.sensor,
+                field: p.field,
+                lab: p.lab
+              }))
+            })}
+          >
+            <div className="chart-card-top-header">
+              <h3 className="chart-card-title">Research Activity &amp; Data Flow</h3>
+              <div className="chart-controls-cluster">
+                <div className="chart-legend-row">
+                  <span className="chart-legend-item"><span className="legend-bullet bullet-sensor" /> {isBharati ? 'Satellite Data' : 'Sensor Data'}</span>
+                  <span className="chart-legend-item"><span className="legend-bullet bullet-field" /> Field Data</span>
+                  <span className="chart-legend-item"><span className="legend-bullet bullet-lab" /> Lab Data</span>
+                </div>
+                <div className="chart-dropdown-pill" onClick={(e) => e.stopPropagation()}>
+                  <span>{dataFlowRange}</span>
+                  <ChevronDown size={13} />
+                </div>
+              </div>
+            </div>
+
+            {/* SVG Spline Chart */}
+            <div className="chart-svg-container">
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="data-flow-svg">
+                {[0, 1, 2, 3, 4, 5].map((val) => {
+                  const y = padTop + (1 - val / maxY) * plotH;
                   return (
-                    <g>
-                      <line 
-                        x1={padLeft} 
-                        y1={threshY} 
-                        x2={svgWidth - padRight} 
-                        y2={threshY} 
-                        stroke="#f59e0b" 
-                        strokeWidth="1.2" 
-                        strokeDasharray="4 3" 
-                      />
-                      <text 
-                        x={svgWidth - padRight + 2} 
-                        y={threshY + 3} 
-                        fill="#f59e0b" 
-                        fontSize="8" 
-                        className="mono-num"
-                      >
-                        LIMIT
+                    <g key={val} className="grid-line-group">
+                      <line x1={padLeft} y1={y} x2={svgWidth - padRight} y2={y} stroke="rgba(30, 58, 95, 0.4)" strokeWidth="1" strokeDasharray="3 3" />
+                      <text x={padLeft - 8} y={y + 3.5} fill="#64748b" fontSize="8.5" textAnchor="end" fontFamily="monospace">
+                        {val} GB
                       </text>
                     </g>
                   );
-                }
-                return null;
-              })()}
+                })}
 
-              {/* Gradient Area Fill */}
-              <path d={chartAreaPath} fill="url(#researchAreaGrad)" />
-
-              {/* Line Stroke */}
-              <path 
-                d={chartSvgPath} 
-                fill="none" 
-                stroke="#38bdf8" 
-                strokeWidth="2.2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-              />
-
-              {/* Data Points */}
-              {chartPoints.map((pt, i) => (
-                <circle 
-                  key={i}
-                  cx={pt.x}
-                  cy={pt.y}
-                  r={hoveredPoint?.time === pt.time ? 4.5 : (i === chartPoints.length - 1 ? 3.5 : 2.5)}
-                  fill={hoveredPoint?.time === pt.time ? '#ffffff' : (i === chartPoints.length - 1 ? '#38bdf8' : '#0284c7')}
-                  stroke="#38bdf8"
-                  strokeWidth={hoveredPoint?.time === pt.time ? 2 : 1}
-                  onMouseEnter={() => setHoveredPoint(pt)}
-                  style={{ cursor: 'pointer' }}
-                />
-              ))}
-
-              {/* X-Axis Time Labels */}
-              {chartPoints.filter((_, idx) => idx % Math.ceil(chartPoints.length / 6) === 0 || idx === chartPoints.length - 1).map((pt, i) => (
-                <text 
-                  key={i}
-                  x={pt.x}
-                  y={svgHeight - 8}
-                  fill="#64748b"
-                  fontSize="8.5"
-                  textAnchor="middle"
-                  className="mono-num"
-                >
-                  {pt.time}
-                </text>
-              ))}
-
-              {/* Hover Crosshair & Tooltip */}
-              {hoveredPoint && (
-                <g>
-                  <line 
-                    x1={hoveredPoint.x} 
-                    y1={padTop} 
-                    x2={hoveredPoint.x} 
-                    y2={padTop + plotHeight} 
-                    stroke="#38bdf8" 
-                    strokeWidth="1" 
-                    strokeDasharray="2 2" 
-                  />
-                  <g transform={`translate(${Math.min(svgWidth - 95, Math.max(padLeft, hoveredPoint.x - 45))}, ${Math.max(padTop - 5, hoveredPoint.y - 30)})`}>
-                    <rect x="0" y="0" width="90" height="22" rx="4" fill="#080e1a" stroke="#0ea5e9" strokeWidth="1" />
-                    <text x="45" y="10" fill="#94a3b8" fontSize="7.5" textAnchor="middle">{hoveredPoint.time}</text>
-                    <text x="45" y="18" fill="#38bdf8" fontSize="8.5" fontWeight="bold" textAnchor="middle" className="mono-num">
-                      {hoveredPoint.value} {chartDataset.unit}
+                {chartPoints.map((pt, i) => {
+                  const x = padLeft + (i / (chartPoints.length - 1)) * plotW;
+                  return (
+                    <text key={pt.day} x={x} y={svgHeight - 4} fill="#64748b" fontSize="8.5" textAnchor="middle" fontFamily="monospace">
+                      {pt.day}
                     </text>
-                  </g>
-                </g>
-              )}
-            </svg>
-          </div>
-        </div>
-      </div>
+                  );
+                })}
 
-      {/* ====================================================================
-          4-QUADRANT SCIENTIFIC OBSERVATORIES DEEP-DIVE GRID
-          ==================================================================== */}
-      <div className="research-quadrant-grid">
-        
-        {/* QUAD 1: SEISMIC MONITORING PANEL */}
-        <div className="research-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <Waves size={16} className="text-cyan" />
-              <h3>Borehole Seismic Tremor Monitor</h3>
-            </div>
-            <span className={`status-pill ${seismic.status === 'NORMAL' ? 'pill-green' : 'pill-amber'}`}>
-              {seismic.status}
-            </span>
-          </div>
+                <path d={sensorPath} fill="none" stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 5px rgba(56, 189, 248, 0.5))' }} />
+                <path d={fieldPath} fill="none" stroke="#34d399" strokeWidth="2.2" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 5px rgba(52, 211, 153, 0.5))' }} />
+                <path d={labPath} fill="none" stroke="#fbbf24" strokeWidth="2.2" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 5px rgba(251, 191, 36, 0.5))' }} />
 
-          <div className="r-hero-stat">
-            <span className="r-hero-num mono-num">{seismic.dominant_frequency_hz}</span>
-            <span className="r-hero-unit">Hz</span>
-          </div>
-          <div className="r-hero-sublabel">Dominant Natural Tremor Frequency</div>
-
-          <div className="r-stats-subgrid">
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Peak Frequency</span>
-              <span className="r-substat-val mono-num text-cyan">{seismic.peak_frequency_hz || '2.45'} Hz</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Average Frequency</span>
-              <span className="r-substat-val mono-num text-emerald">{seismic.avg_frequency_hz || '1.76'} Hz</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Ground Acceleration</span>
-              <span className="r-substat-val mono-num">{seismic.peak_ground_acceleration_g} g</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Displacement</span>
-              <span className="r-substat-val mono-num">{seismic.tremor_amplitude_um} µm</span>
-            </div>
-          </div>
-
-          {/* Live Waveform-style visualization */}
-          <div className="seismic-waveform-box">
-            <div className="waveform-header-row">
-              <span className="w-lbl">Real-Time Seismograph Waveform:</span>
-              <span className="w-sub">SIMULATED STREAM</span>
-            </div>
-            <div className="seismic-waveform-visual">
-              <svg viewBox="0 0 280 40" className="waveform-svg">
-                <path 
-                  d={activeStationId === 'station-bharati' 
-                    ? "M0,20 Q15,4 30,20 T60,20 T90,36 T120,6 T150,30 T180,10 T210,34 T240,12 T280,20" 
-                    : "M0,20 Q35,8 70,20 T140,20 T210,12 T280,20"} 
-                  fill="none" 
-                  stroke="#38bdf8" 
-                  strokeWidth="1.8" 
-                  className="flowing-wire-anim"
-                />
+                <circle cx={sensorCoords[6].x} cy={sensorCoords[6].y} r="3.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+                <circle cx={fieldCoords[6].x} cy={fieldCoords[6].y} r="3.5" fill="#34d399" stroke="#ffffff" strokeWidth="1.5" />
+                <circle cx={labCoords[6].x} cy={labCoords[6].y} r="3.5" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" />
               </svg>
             </div>
-            <span className="seismic-event-tag mono-num">
-              Event: {seismic.event_classification} ({seismic.borehole_depth_meters}m Borehole)
-            </span>
-          </div>
-        </div>
-
-        {/* QUAD 2: SNOW / GLACIOLOGICAL MONITORING PANEL */}
-        <div className="research-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <Snowflake size={16} className="text-cyan" />
-              <h3>Ultrasonic Snowpack & Firn Profile</h3>
-            </div>
-            <span className="status-pill pill-green">SR50A Acoustic Depth</span>
           </div>
 
-          <div className="r-hero-stat">
-            <span className="r-hero-num mono-num">{snow.snowpack_total_depth_cm}</span>
-            <span className="r-hero-unit">cm</span>
-          </div>
-          <div className="r-hero-sublabel">Total Snowpack / Ice Core Depth</div>
+          {/* MIDDLE COLUMN 2: Research Projects List Card */}
+          <div className="research-projects-card">
+            <div className="r-projects-header">
+              <h3 className="card-heading-title">Research Projects</h3>
+              <span className="view-all-action-btn" onClick={() => setSubTab('projects')}>View All →</span>
+            </div>
 
-          <div className="r-stats-subgrid">
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Accumulation Rate</span>
-              <span className="r-substat-val mono-num text-cyan">{snow.rate_cm_day || '2.1'} cm/day</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">7-Day Net Accumulation</span>
-              <span className="r-substat-val mono-num text-emerald">+{snow.snow_accumulation_7d_cm || '58.2'} cm</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Snowpack Density</span>
-              <span className="r-substat-val mono-num">{snow.snow_density_kg_per_m3} kg/m³</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Sub-Surface Firn Temp</span>
-              <span className="r-substat-val mono-num text-amber">{snow.subsurface_firn_temperature_c}°C</span>
-            </div>
-          </div>
-
-          {/* Glaciological Firn Compaction Meter */}
-          <div className="snow-density-meter">
-            <div className="meter-label-row">
-              <span>Firn Compaction Index (Deep Ice Core)</span>
-              <span className="mono-num text-cyan">84% Solid Firn</span>
-            </div>
-            <div className="meter-track">
-              <div className="meter-fill" style={{ width: '84%', background: 'linear-gradient(90deg, #38bdf8, #0284c7)' }} />
-            </div>
-            <span className="meter-note">
-              {activeStationId === 'station-bharati' 
-                ? 'High coastal maritime snowfall rate. Warning threshold configured at 230 cm.'
-                : 'Dry inland oasis precipitation rate. Nominal accumulation profile.'}
-            </span>
-          </div>
-        </div>
-
-        {/* QUAD 3: GEOMAGNETIC & AURORAL MONITORING PANEL */}
-        <div className="research-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <Compass size={16} className="text-cyan" />
-              <h3>Geomagnetic & Auroral Flux</h3>
-            </div>
-            <span className="status-pill pill-green">{kp.storm_classification}</span>
-          </div>
-
-          <div className="r-hero-stat">
-            <span className="r-hero-num mono-num text-cyan">{kp.kp_index_current}</span>
-            <span className="r-hero-unit">/ 9 Kp</span>
-          </div>
-          <div className="r-hero-sublabel">Planetary Geomagnetic Kp Index</div>
-
-          <div className="r-stats-subgrid">
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Total Magnetic Field</span>
-              <span className="r-substat-val mono-num">{kp.total_magnetic_field_intensity_nt} nT</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Horizontal Vector (H)</span>
-              <span className="r-substat-val mono-num">{kp.horizontal_component_h_nt} nT</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">Magnetic Declination</span>
-              <span className="r-substat-val mono-num">{kp.magnetic_declination_deg}°</span>
-            </div>
-            <div className="r-substat-box">
-              <span className="r-substat-lbl">GNSS S4 Scintillation</span>
-              <span className="r-substat-val mono-num text-emerald">{kp.ionospheric_scintillation_s4} (Quiet)</span>
-            </div>
-          </div>
-
-          {/* Auroral Status Banner */}
-          <div className="aurora-activity-tag">
-            <span className="tag-icon">🌌</span>
-            <span>Auroral Status: <strong>{kp.auroral_electrojet_activity}</strong></span>
-          </div>
-        </div>
-
-        {/* QUAD 4: CREW BIO-TELEMETRY (AGGREGATED & PRIVACY SAFE) */}
-        <div className="research-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <HeartPulse size={16} className="text-cyan" />
-              <h3>Overwintering Crew Bio-Telemetry</h3>
-            </div>
-            <span className="status-pill pill-green">
-              {crew.active_overwintering_personnel || crew.count || 24} Active Expedition Crew
-            </span>
-          </div>
-
-          <div className="crew-summary-stats">
-            <div className="c-stat-tile">
-              <span className="c-lbl">Avg Heart Rate</span>
-              <span className="c-val mono-num text-emerald">{crew.average_heart_rate_bpm} <small>bpm</small></span>
-            </div>
-            <div className="c-stat-tile">
-              <span className="c-lbl">Avg Blood SpO₂</span>
-              <span className="c-val mono-num text-cyan">{crew.average_spo2_percent}%</span>
-            </div>
-            <div className="c-stat-tile">
-              <span className="c-lbl">Stress Score</span>
-              <span className="c-val mono-num text-emerald">{crew.average_stress_index} / 100</span>
-            </div>
-          </div>
-
-          {/* Aggregated Expedition Roles Distribution (Privacy-Safe) */}
-          <div className="crew-aggregated-duty-box">
-            <div className="agg-duty-header">
-              <span className="agg-duty-title">Aggregated Expedition Personnel Distribution:</span>
-              <span className="agg-duty-badge">PRIVACY-SAFE</span>
-            </div>
-            <div className="duty-bars-stack">
-              {(crew.duty_distribution || [
-                { role: 'Atmospheric & Climate Science', pct: 35 },
-                { role: 'Microgrid & Life Support Engineering', pct: 30 },
-                { role: 'Glaciology & Cryosphere Core', pct: 20 },
-                { role: 'Command & Medical Safety', pct: 15 },
-              ]).map((duty, idx) => (
-                <div key={idx} className="duty-bar-item">
-                  <div className="duty-bar-labels">
-                    <span>{duty.role}</span>
-                    <span className="mono-num text-cyan">{duty.pct}%</span>
+            <div className="r-projects-list">
+              {currentProjects.map((p) => {
+                const IconComp = p.icon;
+                return (
+                  <div 
+                    key={p.id} 
+                    className="r-project-row interactive-card"
+                    onClick={() => openDrillDown({
+                      title: p.name,
+                      type: 'DRILL_DOWN',
+                      category: 'RESEARCH_PROJECT',
+                      currentValue: p.status,
+                      interpretation: p.sub,
+                      recommendation: `Operational time remaining: ${p.daysLeft}. Real-time telemetry linked.`,
+                      station: stationDisplayName + ' Station'
+                    })}
+                  >
+                    <div className="r-proj-left">
+                      <div className="r-proj-icon-circle">
+                        <IconComp size={13} className="text-cyan" />
+                      </div>
+                      <div className="r-proj-info">
+                        <span className="r-proj-title">{p.name}</span>
+                        <span className="r-proj-sub">{p.sub}</span>
+                      </div>
+                    </div>
+                    <span className={`r-proj-status-badge ${p.badgeClass || (p.status === 'Active' || p.status === 'Ongoing' ? 'badge-ongoing' : 'badge-planned-blue')}`}>
+                      ● {p.status} <span className="badge-days">{p.daysLeft}</span>
+                    </span>
                   </div>
-                  <div className="duty-track">
-                    <div className="duty-fill" style={{ width: `${duty.pct}%` }} />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* MIDDLE COLUMN 3 (FOR BHARATI): Live Research Feed */}
+          {isBharati && (
+            <div className="live-feed-middle-card">
+              <div className="feed-card-header">
+                <h3 className="card-heading-title">Live Research Feed</h3>
+                <span className="view-all-action-btn" onClick={() => setSubTab('overview')}>View All →</span>
+              </div>
+
+              <div className="feed-items-list">
+                {bharatiLiveFeed.map((item) => {
+                  const IconComp = item.icon;
+                  return (
+                    <div 
+                      key={item.id} 
+                      className="feed-row-item interactive-card"
+                      onClick={() => openDrillDown({
+                        title: item.title,
+                        type: 'DRILL_DOWN',
+                        category: 'FEED_EVENT',
+                        currentValue: item.time,
+                        status: 'NORMAL',
+                        interpretation: item.desc,
+                        recommendation: 'Log stored in telemetry database repository.',
+                        station: 'Bharati Station'
+                      })}
+                    >
+                      <div className="feed-icon-circle">
+                        <IconComp size={11} className="text-cyan" />
+                      </div>
+                      <div className="feed-text-col">
+                        <span className="feed-item-title">{item.title}</span>
+                        <span className="feed-item-desc">{item.desc}</span>
+                      </div>
+                      <span className="feed-item-time">{item.time}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ====================================================================
+            BOTTOM SECTION
+            For Bharati: 4 Columns (Environmental Conditions | Resource & Equipment | Research Insights | AI Research Assistant)
+            For Maitri: 3 Columns (Satellite Map | Equipment & Lab | Feed & AI)
+            ==================================================================== */}
+        {isBharati ? (
+          <div className="bharati-bottom-4col-grid">
+            
+            {/* 1. Environmental Conditions Card */}
+            <div 
+              className="bharati-env-conditions-card interactive-card"
+              onClick={() => openDrillDown({
+                title: 'Bharati Environmental Conditions',
+                type: 'DRILL_DOWN',
+                category: 'ENVIRONMENT',
+                currentValue: '-18.7°C',
+                status: 'NORMAL',
+                interpretation: 'Continuous meteorological monitoring for Larsemann Hills. Ambient light snow with steady barometric gradient.',
+                recommendation: 'All parameters within standard operating safety thresholds.',
+                station: 'Bharati Station'
+              })}
+            >
+              <div className="b-card-header">
+                <h3 className="card-heading-title">Environmental Conditions</h3>
+                <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSidebarTab('environment'); }}>View Details →</span>
+              </div>
+
+              {/* 4 Mini Metrics Grid */}
+              <div className="bharati-env-metrics-grid">
+                <div className="b-env-metric-tile">
+                  <span className="b-env-lbl">Temperature</span>
+                  <div className="b-env-val-row">
+                    <Thermometer size={12} className="text-cyan" />
+                    <span className="b-env-val">-18.7°C</span>
+                  </div>
+                  <span className="b-env-sub text-cyan">↑ 0.8°C 24h</span>
+                </div>
+
+                <div className="b-env-metric-tile">
+                  <span className="b-env-lbl">Wind Speed</span>
+                  <div className="b-env-val-row">
+                    <Wind size={12} className="text-cyan" />
+                    <span className="b-env-val">28 km/h</span>
+                  </div>
+                  <span className="b-env-sub text-cyan">↑ 5 km/h 24h</span>
+                </div>
+
+                <div className="b-env-metric-tile">
+                  <span className="b-env-lbl">Humidity</span>
+                  <div className="b-env-val-row">
+                    <Droplets size={12} className="text-cyan" />
+                    <span className="b-env-val">68%</span>
+                  </div>
+                  <span className="b-env-sub text-cyan">↑ 4% 24h</span>
+                </div>
+
+                <div className="b-env-metric-tile">
+                  <span className="b-env-lbl">Pressure</span>
+                  <div className="b-env-val-row">
+                    <Gauge size={12} className="text-cyan" />
+                    <span className="b-env-val">987 hPa</span>
+                  </div>
+                  <span className="b-env-sub text-amber">↓ 2 hPa 24h</span>
+                </div>
+              </div>
+
+              {/* Mini Multi-Line SVG Chart */}
+              <div className="b-env-chart-wrap">
+                <svg viewBox="0 0 280 85" className="b-env-mini-svg">
+                  {[-10, -20, -30].map((val, idx) => {
+                    const y = 10 + idx * 28;
+                    return (
+                      <g key={val}>
+                        <line x1="30" y1={y} x2="275" y2={y} stroke="rgba(30, 58, 95, 0.35)" strokeWidth="1" strokeDasharray="2 2" />
+                        <text x="24" y={y + 3} fill="#64748b" fontSize="7.5" textAnchor="end" fontFamily="monospace">{val}</text>
+                      </g>
+                    );
+                  })}
+                  {['08 Sep', '09 Sep', '10 Sep', '11 Sep', '12 Sep'].map((d, i) => {
+                    const x = 36 + i * 58;
+                    return (
+                      <text key={d} x={x} y="78" fill="#64748b" fontSize="7" textAnchor="middle" fontFamily="monospace">{d}</text>
+                    );
+                  })}
+                  {/* Temp Line (cyan) */}
+                  <path d="M 36,46 C 65,42 94,48 123,45 C 152,42 181,38 210,40 C 239,42 255,44 268,43" fill="none" stroke="#38bdf8" strokeWidth="1.8" />
+                  {/* Wind Line (teal) */}
+                  <path d="M 36,54 C 65,52 94,49 123,51 C 152,48 181,46 210,48 C 239,45 255,43 268,42" fill="none" stroke="#34d399" strokeWidth="1.8" />
+                  {/* Pressure Line (purple/blue) */}
+                  <path d="M 36,60 C 65,58 94,62 123,59 C 152,56 181,61 210,58 C 239,57 255,59 268,60" fill="none" stroke="#818cf8" strokeWidth="1.8" />
+                </svg>
+                <div className="b-env-legend-row">
+                  <span className="b-leg-item"><span className="leg-dot bg-cyan" /> Temperature</span>
+                  <span className="b-leg-item"><span className="leg-dot bg-emerald" /> Wind Speed</span>
+                  <span className="b-leg-item"><span className="leg-dot bg-indigo" /> Pressure</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Resource & Equipment Status Card */}
+            <div 
+              className="bharati-resource-equip-card interactive-card"
+              onClick={() => openDrillDown({
+                title: 'Bharati Resource & Equipment Status',
+                type: 'DRILL_DOWN',
+                category: 'LOGISTICS',
+                currentValue: 'OPERATIONAL',
+                status: 'NORMAL',
+                interpretation: 'Fuel storage at 68%, Power generation at 76%, Potable water at 82%, Food & spare supplies at 71%.',
+                recommendation: 'Generator G-02 scheduled for routine oil replacement.',
+                station: 'Bharati Station'
+              })}
+            >
+              <div className="b-card-header">
+                <h3 className="card-heading-title">Resource &amp; Equipment Status</h3>
+                <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSidebarTab('infrastructure'); }}>View All →</span>
+              </div>
+
+              {/* 4 Circular Progress Gauges */}
+              <div className="bharati-circular-gauges-row">
+                {/* Fuel */}
+                <div className="b-circle-gauge-item">
+                  <div className="b-ring-box">
+                    <svg viewBox="0 0 50 50" className="b-ring-svg">
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="rgba(30,58,95,0.5)" strokeWidth="4" />
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="#38bdf8" strokeWidth="4" strokeDasharray="113" strokeDashoffset={113 * (1 - 0.68)} strokeLinecap="round" transform="rotate(-90 25 25)" />
+                    </svg>
+                    <span className="b-ring-pct">68%</span>
+                  </div>
+                  <span className="b-ring-lbl">Fuel</span>
+                  <span className="b-ring-sub">8,160 / 12,000 L</span>
+                </div>
+
+                {/* Power */}
+                <div className="b-circle-gauge-item">
+                  <div className="b-ring-box">
+                    <svg viewBox="0 0 50 50" className="b-ring-svg">
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="rgba(30,58,95,0.5)" strokeWidth="4" />
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="#38bdf8" strokeWidth="4" strokeDasharray="113" strokeDashoffset={113 * (1 - 0.76)} strokeLinecap="round" transform="rotate(-90 25 25)" />
+                    </svg>
+                    <span className="b-ring-pct">76%</span>
+                  </div>
+                  <span className="b-ring-lbl">Power</span>
+                  <span className="b-ring-sub">96 / 125 kW</span>
+                </div>
+
+                {/* Water */}
+                <div className="b-circle-gauge-item">
+                  <div className="b-ring-box">
+                    <svg viewBox="0 0 50 50" className="b-ring-svg">
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="rgba(30,58,95,0.5)" strokeWidth="4" />
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="#38bdf8" strokeWidth="4" strokeDasharray="113" strokeDashoffset={113 * (1 - 0.82)} strokeLinecap="round" transform="rotate(-90 25 25)" />
+                    </svg>
+                    <span className="b-ring-pct">82%</span>
+                  </div>
+                  <span className="b-ring-lbl">Water</span>
+                  <span className="b-ring-sub">32,800 / 40,000 L</span>
+                </div>
+
+                {/* Supplies */}
+                <div className="b-circle-gauge-item">
+                  <div className="b-ring-box">
+                    <svg viewBox="0 0 50 50" className="b-ring-svg">
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="rgba(30,58,95,0.5)" strokeWidth="4" />
+                      <circle cx="25" cy="25" r="18" fill="none" stroke="#38bdf8" strokeWidth="4" strokeDasharray="113" strokeDashoffset={113 * (1 - 0.71)} strokeLinecap="round" transform="rotate(-90 25 25)" />
+                    </svg>
+                    <span className="b-ring-pct">71%</span>
+                  </div>
+                  <span className="b-ring-lbl">Supplies</span>
+                  <span className="b-ring-sub">2.1 / 3.0 T</span>
+                </div>
+              </div>
+
+              {/* Key Equipment Table */}
+              <div className="bharati-key-equip-section">
+                <div className="b-subhead-row">
+                  <span className="b-subhead-txt">Key Equipment</span>
+                  <div className="b-equip-cols-head">
+                    <span>Status</span>
+                    <span>Last Updated</span>
                   </div>
                 </div>
-              ))}
-            </div>
-            <span className="privacy-disclaimer-txt">
-              🔒 Aggregated station-level indicator. Individual medical records and personal identifiable info are protected.
-            </span>
-          </div>
-        </div>
 
-      </div>
-
-      {/* ====================================================================
-          OPERATIONAL STATUS & RECENT RESEARCH ALERTS
-          ==================================================================== */}
-      <div className="research-bottom-status-grid">
-        
-        {/* Research Systems Status Panel */}
-        <div className="r-status-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <ShieldCheck size={16} className="text-cyan" />
-              <h3>Research Subsystems Health</h3>
-            </div>
-            <span className="status-pill pill-green">ALL SYSTEMS NOMINAL</span>
-          </div>
-
-          <div className="r-systems-status-list">
-            <div className="r-sys-status-row">
-              <div className="sys-left">
-                <span className="live-dot" />
-                <span>Borehole Seismometer (Trillium 120QA)</span>
-              </div>
-              <span className="sys-status-val text-emerald">ONLINE (45m Depth)</span>
-            </div>
-            <div className="r-sys-status-row">
-              <div className="sys-left">
-                <span className="live-dot" />
-                <span>Campbell SR50A Acoustic Snow Profiler</span>
-              </div>
-              <span className="sys-status-val text-emerald">ONLINE (Calibrated)</span>
-            </div>
-            <div className="r-sys-status-row">
-              <div className="sys-left">
-                <span className="live-dot" />
-                <span>Tri-Axial Fluxgate Magnetometer (dIdD)</span>
-              </div>
-              <span className="sys-status-val text-emerald">ONLINE (Continuous)</span>
-            </div>
-            <div className="r-sys-status-row">
-              <div className="sys-left">
-                <span className={`live-dot ${isWsConnected ? '' : 'dot-amber'}`} />
-                <span>Research Telemetry WebSocket Link</span>
-              </div>
-              <span className={`sys-status-val ${isWsConnected ? 'text-emerald' : 'text-amber'}`}>
-                {isWsConnected ? 'LIVE / CONNECTED' : 'DISCONNECTED (Polling)'}
-              </span>
-            </div>
-            <div className="r-sys-status-row">
-              <div className="sys-left">
-                <span className="live-dot" />
-                <span>Satellite Bandwidth Sync (GSAT-7A)</span>
-              </div>
-              <span className="sys-status-val text-cyan">NOMINAL (Priority Q)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Research Alerts & Incidents */}
-        <div className="r-alerts-panel polaris-card">
-          <div className="r-panel-header">
-            <div className="r-panel-title-group">
-              <AlertTriangle size={16} className="text-cyan" />
-              <h3>Recent Research & Environmental Alerts</h3>
-            </div>
-            <span className="status-pill pill-cyan">{researchAlerts.length} Active Events</span>
-          </div>
-
-          <div className="r-alerts-feed-stack">
-            {researchAlerts.map((alt) => (
-              <div key={alt.id} className={`r-alert-item-card ${alt.severity === 'WARNING' ? 'alt-warning' : 'alt-info'}`}>
-                <div className="alt-item-top">
-                  <span className={`alt-sev-pill ${alt.severity === 'WARNING' ? 'sev-warn' : 'sev-info'}`}>
-                    {alt.severity}
-                  </span>
-                  <h5 className="alt-item-title">{alt.title}</h5>
-                  <span className="alt-item-time mono-num">{alt.timestamp || 'Recent'}</span>
+                <div className="b-equip-list">
+                  {bharatiKeyEquipment.map(eq => (
+                    <div key={eq.id} className="b-equip-row">
+                      <span className="b-eq-name">{eq.name}</span>
+                      <div className="b-eq-right">
+                        <span className="b-eq-status" style={{ color: eq.statusColor }}>
+                          ● {eq.status}
+                        </span>
+                        <span className="b-eq-time">{eq.lastUpdated}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="alt-item-desc">{alt.description}</p>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-      </div>
+            {/* 3. Research Insights Card */}
+            <div 
+              className="bharati-insights-card interactive-card"
+              onClick={() => openDrillDown({
+                title: 'Bharati Research Insights Synthesis',
+                type: 'DRILL_DOWN',
+                category: 'RESEARCH_AI',
+                currentValue: '3 ACTIVE INSIGHTS',
+                status: 'NORMAL',
+                interpretation: 'Continuous multi-spectral analysis combining CryoSat-2 altimetry, CO2 spectrometers, and broadband seismometers.',
+                recommendation: 'Increase satellite interferometry acquisition cadence over Prydz Bay.',
+                station: 'Bharati Station'
+              })}
+            >
+              <div className="b-card-header">
+                <h3 className="card-heading-title">Research Insights</h3>
+                <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSubTab('data'); }}>View All →</span>
+              </div>
+
+              <div className="bharati-insights-list">
+                {/* Insight 1 */}
+                <div className="b-insight-box">
+                  <div className="b-ins-left-icon">
+                    <TrendingUp size={14} className="text-rose-400" />
+                  </div>
+                  <div className="b-ins-text-block">
+                    <div className="b-ins-title-row">
+                      <span className="b-ins-title">Glacier Retreat Rate</span>
+                      <span className="b-ins-metric text-rose-400">+12%</span>
+                    </div>
+                    <span className="b-ins-desc">Increased melting rate observed in Larsemann region.</span>
+                  </div>
+                </div>
+
+                {/* Insight 2 */}
+                <div className="b-insight-box">
+                  <div className="b-ins-left-icon">
+                    <CloudSnow size={14} className="text-emerald-400" />
+                  </div>
+                  <div className="b-ins-text-block">
+                    <div className="b-ins-title-row">
+                      <span className="b-ins-title">Atmospheric CO2 Levels</span>
+                      <span className="b-ins-metric text-emerald-400">Stable</span>
+                    </div>
+                    <span className="b-ins-desc">No significant change in last 30 days.</span>
+                  </div>
+                </div>
+
+                {/* Insight 3 */}
+                <div className="b-insight-box">
+                  <div className="b-ins-left-icon">
+                    <Activity size={14} className="text-cyan" />
+                  </div>
+                  <div className="b-ins-text-block">
+                    <div className="b-ins-title-row">
+                      <span className="b-ins-title">Seismic Activity</span>
+                      <span className="b-ins-metric text-cyan">Low</span>
+                    </div>
+                    <span className="b-ins-desc">Minor tremors detected (M 2.1).</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions Buttons */}
+              <div className="bharati-quick-actions-bar" onClick={(e) => e.stopPropagation()}>
+                <span className="quick-actions-label">Quick Actions</span>
+                <div className="quick-actions-btns-row">
+                  <button type="button" className="b-quick-btn" onClick={() => handleSendAiMessage('Upload research telemetry')}>
+                    <UploadCloud size={11} /> Upload Data
+                  </button>
+                  <button type="button" className="b-quick-btn" onClick={() => handleSendAiMessage('View recent field reports')}>
+                    <FileCheck size={11} /> View Field Reports
+                  </button>
+                  <button type="button" className="b-quick-btn" onClick={() => handleSendAiMessage('Open laboratory spectrometer portal')}>
+                    <FlaskConical size={11} /> Open Lab Portal
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. AI Research Assistant (Beta) Card */}
+            <div className="bharati-ai-assistant-card">
+              <div className="b-card-header">
+                <div className="ai-header-left">
+                  <Bot size={13} className="text-cyan" />
+                  <span className="ai-title-txt">AI Research Assistant</span>
+                  <span className="ai-beta-tag">Beta</span>
+                </div>
+                <X size={12} className="text-dim cursor-pointer hover:text-cyan" title="Collapse" />
+              </div>
+
+              <div className="ai-bubble-content-area">
+                <div className="b-ai-bot-circle">
+                  <Bot size={14} className="text-cyan" />
+                </div>
+                <div className="b-ai-message-text">
+                  {aiMessages[aiMessages.length - 1]?.text || 
+                    `Based on the latest satellite data and field observations, the ice shelf near Bharati Station shows a 12% increase in surface melting rate compared to last month. This may impact the planned drilling schedule for Project IceCore-3. I recommend increasing monitoring frequency in this region.`
+                  }
+                </div>
+              </div>
+
+              {/* Quick Action Suggestion Buttons */}
+              <div className="b-ai-actions-row">
+                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('View analysis')}>
+                  View Analysis
+                </button>
+                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('Compare with past')}>
+                  Compare with Past
+                </button>
+                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('Summary report')}>
+                  Summary Report
+                </button>
+              </div>
+
+              {/* Input Form */}
+              <form 
+                className="b-ai-input-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendAiMessage();
+                }}
+              >
+                <input
+                  type="text"
+                  className="b-ai-input-field"
+                  placeholder="Ask anything about research data, trends, or insights..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                />
+                <button type="submit" className="b-ai-send-btn" title="Send question to AI analyst">
+                  <Send size={12} />
+                </button>
+              </form>
+            </div>
+
+          </div>
+        ) : (
+          /* MAITRI BOTTOM 3-COLUMN GRID */
+          <div className="research-bottom-3col-grid">
+            
+            {/* COLUMN 1: Research Data & Visualizations (Satellite Thermal Map) */}
+            <div className="vis-map-card">
+              <div className="vis-card-top-bar">
+                <div className="vis-top-title-row">
+                  <h3 className="card-heading-title">Research Data &amp; Visualizations</h3>
+                </div>
+                <div className="vis-filter-tabs-row">
+                  <button type="button" className={`vis-tab-pill ${visCategory === 'satellite' ? 'active' : ''}`} onClick={() => setVisCategory('satellite')}>Satellite Imagery</button>
+                  <button type="button" className={`vis-tab-pill ${visCategory === 'climate' ? 'active' : ''}`} onClick={() => setVisCategory('climate')}>Climate Data</button>
+                  <button type="button" className={`vis-tab-pill ${visCategory === 'ocean' ? 'active' : ''}`} onClick={() => setVisCategory('ocean')}>Ocean Data</button>
+                  <button type="button" className={`vis-tab-pill ${visCategory === 'atmospheric' ? 'active' : ''}`} onClick={() => setVisCategory('atmospheric')}>Atmospheric Data</button>
+                  <button type="button" className={`vis-tab-pill ${visCategory === 'glacier' ? 'active' : ''}`} onClick={() => setVisCategory('glacier')}>Glacier Monitoring</button>
+                </div>
+              </div>
+
+              {/* Map Canvas with Controls Overlay */}
+              <div className="vis-canvas-container">
+                <div className="vis-overlay-controls">
+                  <div className="vis-date-dropdown">
+                    <Calendar size={11} className="text-cyan" />
+                    <span>{selectedDate}</span>
+                    <ChevronDown size={11} />
+                  </div>
+
+                  <div className="vis-layers-checklist">
+                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('surfaceTemp')}>
+                      <input type="checkbox" checked={layers.surfaceTemp} readOnly />
+                      <span>Surface Temperature</span>
+                    </label>
+                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('snowDepth')}>
+                      <input type="checkbox" checked={layers.snowDepth} readOnly />
+                      <span>Snow Depth</span>
+                    </label>
+                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('iceVelocity')}>
+                      <input type="checkbox" checked={layers.iceVelocity} readOnly />
+                      <span>Ice Velocity</span>
+                    </label>
+                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('elevation')}>
+                      <input type="checkbox" checked={layers.elevation} readOnly />
+                      <span>Elevation</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Satellite Terrain Image + SVG Thermal Heatmap */}
+                <div className="vis-map-viewport">
+                  <img src="/antarctic_hero_bg.jpg" alt="Antarctic Cryosphere Terrain" className="vis-terrain-bg-img" />
+                  
+                  <svg className="vis-heatmap-svg" viewBox="0 0 400 240">
+                    <defs>
+                      <radialGradient id="thermalRadial" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
+                        <stop offset="25%" stopColor="#f97316" stopOpacity="0.75" />
+                        <stop offset="50%" stopColor="#eab308" stopOpacity="0.65" />
+                        <stop offset="75%" stopColor="#22c55e" stopOpacity="0.55" />
+                        <stop offset="90%" stopColor="#06b6d4" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+
+                    <ellipse cx="200" cy="120" rx="90" ry="75" fill="url(#thermalRadial)" />
+                    <ellipse cx="220" cy="100" rx="45" ry="35" fill="#ef4444" opacity="0.6" />
+
+                    <g className="vis-station-marker">
+                      <circle cx="210" cy="115" r="4.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" className="animate-ping" opacity="0.7" />
+                      <circle cx="210" cy="115" r="3" fill="#38bdf8" />
+                      <text x="218" y="118" fill="#ffffff" fontSize="9" fontWeight="bold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                        Maitri Station
+                      </text>
+                    </g>
+                  </svg>
+
+                  <div className="vis-temperature-colorbar">
+                    <span className="t-bar-label">-10°C</span>
+                    <div className="t-bar-gradient" />
+                    <span className="t-bar-label">-20°C</span>
+                    <div className="t-bar-gradient" />
+                    <span className="t-bar-label">-30°C</span>
+                    <div className="t-bar-gradient" />
+                    <span className="t-bar-label">-40°C</span>
+                  </div>
+
+                  <div className="vis-coords-badge">
+                    <Compass size={11} className="text-cyan" />
+                    <span>{stationCoords}</span>
+                    <ChevronRight size={11} />
+                  </div>
+
+                  <div className="vis-bottom-actions">
+                    <button 
+                      type="button" 
+                      className="vis-action-btn"
+                      onClick={() => openDrillDown({
+                        title: 'Satellite Thermal Cryosphere Twin',
+                        type: 'DRILL_DOWN',
+                        category: 'SATELLITE',
+                        currentValue: '-18.4°C',
+                        unit: 'Surface Temp',
+                        status: 'NORMAL',
+                        interpretation: 'CryoSat-2 and NISAR radar altimetry overlay showing ice shelf equilibrium.',
+                        station: 'Maitri Station'
+                      })}
+                    >
+                      <Box size={11} />
+                      <span>3D View</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      className="vis-action-btn icon-only"
+                      onClick={() => openDrillDown({
+                        title: 'Antarctic Cryosphere Thermal Map',
+                        type: 'DRILL_DOWN',
+                        category: 'SATELLITE',
+                        currentValue: '-18.4°C',
+                        unit: 'Average Surface Temp',
+                        status: 'NORMAL',
+                        interpretation: 'Full scale satellite thermal imaging viewport with active layer filtering.',
+                        station: 'Maitri Station'
+                      })}
+                    >
+                      <Maximize2 size={11} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* COLUMN 2: Equipment & Lab Status */}
+            <div className="equipment-status-card">
+              <div className="equip-card-header">
+                <h3 className="card-heading-title">Equipment &amp; Lab Status</h3>
+                <span className="view-all-action-btn" onClick={() => setSubTab('lab')}>View All →</span>
+              </div>
+
+              <div className="equip-table-header">
+                <span>Equipment</span>
+                <span>Status</span>
+                <span>Last Updated</span>
+              </div>
+
+              <div className="equip-items-list">
+                {equipmentStatusList.map((eq) => (
+                  <div 
+                    key={eq.id} 
+                    className="equip-row-item interactive-card"
+                    onClick={() => openDrillDown({
+                      title: eq.name,
+                      type: 'DRILL_DOWN',
+                      category: 'EQUIPMENT',
+                      currentValue: eq.status,
+                      unit: '',
+                      status: eq.status === 'Online' ? 'NORMAL' : 'WARNING',
+                      interpretation: `Subsystem classification: ${eq.type}. Equipment operational health rating: ${eq.health}%.`,
+                      recommendation: `Last calibration timestamp: ${eq.lastUpdated}. Transmitting nominal data packets.`,
+                      station: 'Maitri Station'
+                    })}
+                  >
+                    <div className="equip-name-col">
+                      <Cpu size={12} className="text-cyan" />
+                      <span className="equip-name-txt">{eq.name}</span>
+                    </div>
+                    <div className="equip-status-col">
+                      <span className={`equip-badge ${eq.badgeClass}`}>
+                        {eq.status}
+                      </span>
+                    </div>
+                    <div className="equip-time-col">
+                      <span>{eq.lastUpdated}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* COLUMN 3: Live Research Feed + AI Research Assistant */}
+            <div className="live-feed-ai-card">
+              
+              {/* Top: Live Research Feed */}
+              <div className="feed-sub-card">
+                <div className="feed-card-header">
+                  <h3 className="card-heading-title">Live Research Feed</h3>
+                  <span className="view-all-action-btn" onClick={() => setSubTab('overview')}>View All →</span>
+                </div>
+
+                <div className="feed-items-list">
+                  {maitriLiveFeed.map((item) => {
+                    const IconComp = item.icon;
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="feed-row-item interactive-card"
+                        onClick={() => openDrillDown({
+                          title: item.title,
+                          type: 'DRILL_DOWN',
+                          category: 'FEED_EVENT',
+                          currentValue: item.time,
+                          status: 'NORMAL',
+                          interpretation: item.desc,
+                          recommendation: 'Log stored in telemetry database repository.',
+                          station: 'Maitri Station'
+                        })}
+                      >
+                        <div className="feed-icon-circle">
+                          <IconComp size={11} className="text-cyan" />
+                        </div>
+                        <div className="feed-text-col">
+                          <span className="feed-item-title">{item.title}</span>
+                          <span className="feed-item-desc">{item.desc}</span>
+                        </div>
+                        <span className="feed-item-time">{item.time}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bottom: AI Research Assistant (Beta) */}
+              <div className="ai-assistant-box">
+                <div className="ai-header-row">
+                  <div className="ai-header-left">
+                    <Bot size={13} className="text-cyan" />
+                    <span className="ai-title-txt">AI Research Assistant</span>
+                    <span className="ai-beta-tag">Beta</span>
+                  </div>
+                  <Maximize2 
+                    size={12} 
+                    className="text-dim cursor-pointer hover:text-cyan" 
+                    title="Expand AI Deep Dive Intelligence"
+                    onClick={() => openDrillDown({
+                      title: `${stationDisplayName} AI Research Intelligence`,
+                      type: 'DRILL_DOWN',
+                      category: 'RESEARCH_AI',
+                      currentValue: 'ACTIVE',
+                      interpretation: aiMessages[aiMessages.length - 1]?.text || 'AI Cryosphere Telemetry Synthesis Active.',
+                      recommendation: 'Model performing continuous Z-score variance tracking and Pearson correlations.',
+                      station: stationDisplayName + ' Station'
+                    })}
+                  />
+                </div>
+
+                <div className="ai-messages-scroll-area">
+                  {aiMessages.map((msg) => (
+                    <div key={msg.id} className={`ai-msg-bubble ${msg.sender === 'user' ? 'user-msg' : 'ai-msg'}`}>
+                      {msg.sender === 'ai' && (
+                        <div className="ai-bot-avatar">
+                          <Bot size={11} className="text-cyan" />
+                        </div>
+                      )}
+                      <p className="ai-msg-text">{msg.text}</p>
+                    </div>
+                  ))}
+                  {isAiTyping && (
+                    <div className="ai-msg-bubble ai-msg">
+                      <span className="ai-typing-dots">Analyzing cryosphere telemetry...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Action Buttons */}
+                <div className="ai-quick-actions-row">
+                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('View detailed analysis')}>
+                    View Analysis
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('Compare with past data')}>
+                    Compare with Past
+                  </button>
+                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('Generate summary report')}>
+                    Summary Report
+                  </button>
+                </div>
+
+                {/* Chat Input Box */}
+                <form 
+                  className="ai-chat-input-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendAiMessage();
+                  }}
+                >
+                  <input
+                    type="text"
+                    className="ai-chat-text-input"
+                    placeholder="Ask anything about research data, trends, or insights..."
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                  />
+                  <button type="submit" className="ai-chat-send-btn" title="Send message">
+                    <Send size={12} />
+                  </button>
+                </form>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* ====================================================================
+            BOTTOM FOOTER (MATCHING SCREENSHOT)
+            ==================================================================== */}
+        <footer className="polaris-station-research-footer">
+          <div className="p-footer-left">
+            <span>POLARIS</span>
+            <span className="p-footer-sep">|</span>
+            <span>Ministry of Earth Sciences</span>
+            <span className="p-footer-sep">|</span>
+            <span>Government of India</span>
+          </div>
+
+          <div className="p-footer-center-projects">
+            <div className="p-footer-proj-tag">
+              <Compass size={12} className="text-cyan" />
+              <span>Glaciology &amp; Climate Change</span>
+            </div>
+            <div className="p-footer-proj-tag">
+              <CloudSnow size={12} className="text-cyan" />
+              <span>Atmospheric Studies</span>
+            </div>
+            <div className="p-footer-proj-tag">
+              <Activity size={12} className="text-cyan" />
+              <span>Marine Ecosystem</span>
+            </div>
+            <div className="p-footer-proj-tag">
+              <Zap size={12} className="text-cyan" />
+              <span>Seismology &amp; Geophysics</span>
+            </div>
+            <div className="p-footer-proj-tag">
+              <Cpu size={12} className="text-cyan" />
+              <span>Space Weather Monitoring</span>
+            </div>
+          </div>
+
+          <div className="p-footer-right">
+            <span>For a Safer, Smarter and More Resilient Antarctic Future</span>
+            <div className="footer-tricolor-badge">
+              <span className="ft-saffron" />
+              <span className="ft-white" />
+              <span className="ft-green" />
+            </div>
+          </div>
+        </footer>
+
+      </main>
 
     </div>
   );

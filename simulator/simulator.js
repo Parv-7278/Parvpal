@@ -1,9 +1,9 @@
 /**
- * Node.js alternative runner for Antarctic Station Sensor Simulator.
- * Provides the same telemetry drift & emergency scenario simulations as simulator.py.
+ * POLARIS Antarctic Station Sensor Simulator.
+ * Provides continuous telemetry drift & emergency scenario simulations for Maitri and Bharati.
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 const TELEMETRY_ENDPOINT = `${BACKEND_URL}/api/telemetry`;
 const ALERT_ENDPOINT = `${BACKEND_URL}/api/alerts`;
 
@@ -11,12 +11,12 @@ const STATIONS = {
   'station-maitri': {
     name: 'Maitri Research Station',
     state: {
-      temperature: -18.0,
-      battery_level: 95.0,
-      power_consumption: 45.0,
+      temperature: -18.7,
+      battery_level: 74.0,
+      power_consumption: 105.0,
       generator_status: 'RUNNING',
-      generator_temperature: 72.0,
-      wind_speed: 32.0,
+      generator_temperature: 78.4,
+      wind_speed: 28.0,
       water_level: 88.0,
       comms_status: 'SAT_LINK_NOMINAL',
     }
@@ -24,13 +24,13 @@ const STATIONS = {
   'station-bharati': {
     name: 'Bharati Research Station',
     state: {
-      temperature: -14.0,
-      battery_level: 98.0,
-      power_consumption: 52.0,
+      temperature: -14.2,
+      battery_level: 91.0,
+      power_consumption: 148.0,
       generator_status: 'RUNNING',
-      generator_temperature: 70.0,
-      wind_speed: 25.0,
-      water_level: 92.0,
+      generator_temperature: 74.1,
+      wind_speed: 44.0,
+      water_level: 94.0,
       comms_status: 'SAT_LINK_NOMINAL',
     }
   }
@@ -45,20 +45,21 @@ async function postJson(url, data) {
     });
     return await res.json();
   } catch (err) {
-    console.error(`❌ Connection error to ${url}:`, err.message);
+    console.error(`[SIMULATOR ERROR] Connection refused: ${url} (${err.message})`);
     return null;
   }
 }
 
 async function runGeneratorThermalRunaway(stationId = 'station-maitri') {
   const stn = STATIONS[stationId];
-  console.log(`\n🔥 [SCENARIO INITIATED] Generator Thermal Runaway on ${stn.name}`);
+  const stName = stationId.includes('maitri') ? 'MAITRI' : 'BHARATI';
+  console.log(`\n🔥 [SIMULATOR] Initiating Generator Thermal Runaway Scenario for ${stName}...`);
   const steps = [70.0, 78.0, 85.0, 92.0, 95.0];
 
   for (let i = 0; i < steps.length; i++) {
     const temp = steps[i];
     stn.state.generator_temperature = temp;
-    stn.state.generator_status = temp >= 92 ? 'OVERHEAT' : temp >= 85 ? 'WARNING' : 'RUNNING';
+    stn.state.generator_status = temp >= 95 ? 'CRITICAL' : temp >= 85 ? 'WARNING' : 'RUNNING';
 
     const payload = {
       station_id: stationId,
@@ -67,40 +68,41 @@ async function runGeneratorThermalRunaway(stationId = 'station-maitri') {
       recorded_at: new Date().toISOString(),
     };
 
-    console.log(`  ↳ Step ${i + 1}/5: Generator Core Temp = ${temp}°C -> Sending Telemetry...`);
+    console.log(`[SIMULATOR] Station: ${stName} | Step ${i + 1}/5 | Sending telemetry... | Temp: ${payload.temperature}°C | Gen: ${temp}°C | Status: ${stn.state.generator_status}`);
     await postJson(TELEMETRY_ENDPOINT, payload);
 
     if (temp >= 95.0) {
-      console.log(`  🚨 [TRIGGER CRITICAL ALERT] 95°C exceeded critical threshold (90°C)!`);
+      console.log(`[SIMULATOR ALERT] 🚨 ${stName} CRITICAL ALERT: Generator failure risk at 95°C!`);
       const alertPayload = {
         station_id: stationId,
         priority: 'CRITICAL',
         category: 'GENERATOR',
-        message: `CRITICAL: Generator 1 on ${stn.name} reached ${temp}°C! Immediate intervention required.`,
+        message: `🚨 ${stName} GENERATOR FAILURE RISK: Core temperature breached 95°C! Immediate shutdown required.`,
         sensor_key: 'generator_temperature',
         sensor_value: temp,
         threshold_value: 90.0,
+        action_required: 'Switch to Generator 2 and initiate non-critical load shedding.',
         triggered_at: new Date().toISOString(),
       };
       await postJson(ALERT_ENDPOINT, alertPayload);
     }
 
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 1400));
   }
 
-  console.log(`✅ [SCENARIO COMPLETED] Generator Thermal Runaway finished.\n`);
+  console.log(`✅ [SIMULATOR] Generator Thermal Runaway completed.\n`);
 }
 
 function driftSensors(stationId) {
   const stn = STATIONS[stationId];
   const s = stn.state;
 
-  s.temperature = +(s.temperature + (Math.random() * 0.8 - 0.4)).toFixed(2);
-  s.battery_level = +(Math.max(85, Math.min(100, s.battery_level + (Math.random() * 0.4 - 0.2)))).toFixed(2);
-  s.power_consumption = +(Math.max(30, Math.min(75, s.power_consumption + (Math.random() * 1.6 - 0.8)))).toFixed(2);
-  s.generator_temperature = +(Math.max(65, Math.min(78, s.generator_temperature + (Math.random() * 1.0 - 0.5)))).toFixed(2);
-  s.wind_speed = +(Math.max(5, Math.min(70, s.wind_speed + (Math.random() * 3.0 - 1.5)))).toFixed(2);
-  s.water_level = +(Math.max(50, Math.min(100, s.water_level + (Math.random() * 0.2 - 0.1)))).toFixed(2);
+  s.temperature = +(s.temperature + (Math.random() * 0.4 - 0.2)).toFixed(2);
+  s.battery_level = +(Math.max(60, Math.min(100, s.battery_level + (Math.random() * 0.2 - 0.1)))).toFixed(2);
+  s.power_consumption = +(Math.max(50, Math.min(180, s.power_consumption + (Math.random() * 1.2 - 0.6)))).toFixed(2);
+  s.generator_temperature = +(Math.max(68, Math.min(82, s.generator_temperature + (Math.random() * 0.6 - 0.3)))).toFixed(2);
+  s.wind_speed = +(Math.max(10, Math.min(85, s.wind_speed + (Math.random() * 2.0 - 1.0)))).toFixed(2);
+  s.water_level = +(Math.max(50, Math.min(100, s.water_level + (Math.random() * 0.1 - 0.05)))).toFixed(2);
 
   return {
     station_id: stationId,
@@ -112,11 +114,12 @@ function driftSensors(stationId) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const isScenario = args.includes('--scenario') || args.includes('-s');
+  const isScenario = args.includes('--scenario') || args.includes('-s') || args.includes('generator_overheat');
 
   console.log('==================================================================');
-  console.log('🏔️  Antarctic Research Station Sensor Simulator (Node.js Runner)');
-  console.log(`📡 Backend Target: ${BACKEND_URL}`);
+  console.log('🏔️  [SIMULATOR] Starting POLARIS Station Telemetry Simulator');
+  console.log(`📡 Telemetry Target: ${TELEMETRY_ENDPOINT}`);
+  console.log(`🚨 Alert Target:     ${ALERT_ENDPOINT}`);
   console.log('==================================================================');
 
   if (isScenario) {
@@ -124,14 +127,21 @@ async function main() {
     return;
   }
 
-  console.log('▶️  Starting normal telemetry stream (Press Ctrl+C to stop)...\n');
-  setInterval(async () => {
+  console.log('▶️  [SIMULATOR] Starting normal multi-station telemetry stream (Press Ctrl+C to stop)...\n');
+  
+  const tick = async () => {
     for (const stnId of Object.keys(STATIONS)) {
       const payload = driftSensors(stnId);
-      await postJson(TELEMETRY_ENDPOINT, payload);
-      console.log(`[${stnId}] 📊 Telemetry Queued | Temp: ${payload.temperature}°C, Gen: ${payload.generator_temperature}°C`);
+      const stName = stnId.includes('maitri') ? 'MAITRI' : 'BHARATI';
+      const res = await postJson(TELEMETRY_ENDPOINT, payload);
+      if (res) {
+        console.log(`[SIMULATOR] Station: ${stName} | Sending telemetry... | Temp: ${payload.temperature}°C | Gen: ${payload.generator_temperature}°C | Battery: ${payload.battery_level}% | Response: 200 OK`);
+      }
     }
-  }, 3000);
+  };
+
+  await tick();
+  setInterval(tick, 3000);
 }
 
 main();

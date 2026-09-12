@@ -1,7 +1,10 @@
 import React from 'react';
 import { AlertTriangle, Flame, Wind, BellRing } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
 
-export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenViewAll }) {
+export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenViewAll, selectedStation = 'Maitri Station' }) {
+  const { openDrillDown } = useModal();
+
   const defaultAlerts = [
     {
       id: 'alert-1',
@@ -10,6 +13,7 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
       source: 'Generator G-02 (Maitri)',
       time: '12:40 PM',
       type: 'critical',
+      details: 'Shaft harmonic vibration frequency reached 4.8 mm/s exceeding nominal threshold of 2.5 mm/s. Bearing casing inspection advised.',
     },
     {
       id: 'alert-2',
@@ -18,6 +22,7 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
       source: 'Maitri Fuel Farm',
       time: '12:35 PM',
       type: 'warning',
+      details: 'Daily consumption rate increased by 14% over baseline due to auxiliary laboratory heating load.',
     },
     {
       id: 'alert-3',
@@ -26,6 +31,7 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
       source: 'Schirmacher Oasis',
       time: '12:30 PM',
       type: 'warning',
+      details: 'Wind speeds gusting at 58.4 km/h with sudden pressure drops. Outdoor scientific traverses suspended.',
     },
   ];
 
@@ -58,6 +64,25 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
     };
   });
 
+  const handleAlertClick = (alert) => {
+    openDrillDown({
+      title: `Alert: ${alert.title}`,
+      type: 'ALERT_DETAIL',
+      category: 'ALERT',
+      currentValue: alert.severity.toUpperCase(),
+      unit: 'Severity',
+      status: alert.severity === 'critical' ? 'CRITICAL' : 'WARNING',
+      interpretation: alert.details || `${alert.title} reported on ${alert.source} at ${alert.time}.`,
+      recommendation: 'Follow standard Antarctic mission control standard operating procedures (SOP).',
+      station: selectedStation,
+      metadata: {
+        source: alert.source,
+        timestamp: alert.time,
+        severity: alert.severity,
+      }
+    });
+  };
+
   return (
     <div className="active-alerts-section polaris-card">
       <div className="card-header-with-action">
@@ -74,7 +99,11 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
         {alertsList.map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.id} className={`alert-list-item ${item.severity}`}>
+            <div 
+              key={item.id} 
+              className={`alert-list-item ${item.severity} interactive-card`}
+              onClick={() => handleAlertClick(item)}
+            >
               <div 
                 className="alert-icon-wrap"
                 style={{ backgroundColor: item.iconBg, color: item.iconColor }}
