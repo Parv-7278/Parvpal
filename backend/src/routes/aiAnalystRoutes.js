@@ -6,6 +6,9 @@ const { validateStationAccess } = require('../middleware/authRoleMiddleware');
 // GET /api/research/ai-analyst/status
 router.get('/status', aiAnalystController.getAIAnalystStatus);
 
+// POST /api/research/ai-analyst/report-24h
+router.post('/report-24h', validateStationAccess, aiAnalystController.generate24hSummaryReport);
+
 // POST /api/research/ai-analyst/analyze
 router.post('/analyze', validateStationAccess, aiAnalystController.analyzeResearchData);
 
@@ -13,3 +16,4 @@ router.post('/analyze', validateStationAccess, aiAnalystController.analyzeResear
 router.post('/ask', validateStationAccess, aiAnalystController.askResearchAI);
 
 module.exports = router;
+

@@ -24,12 +24,21 @@ Requirements Implemented:
 """
 
 import sys
+import os
 import time
 import random
 import json
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
+
+# Fix Windows console UTF-8 UnicodeEncodeError
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 # -----------------------------------------------------------------------------
 # Configuration
@@ -38,12 +47,12 @@ STATION_NAME = "Bharati Research Station"
 STATION_ID = "station-bharati"
 INTERVAL_SECONDS = 2.0
 
-# Backend API endpoints (Ready for Node.js Backend integration)
-BACKEND_BASE_URL = "http://localhost:5000"
+# Backend API endpoints (Ready for Node.js Backend & FastAPI integration)
+BACKEND_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
 TELEMETRY_API_URL = f"{BACKEND_BASE_URL}/api/sensor-data"
 ALERT_API_URL = f"{BACKEND_BASE_URL}/api/alerts"
 
-# Set this to True when you want to send data to the Node.js backend
+# Set this to True when you want to send data to the backend
 SEND_TO_BACKEND = True
 
 
@@ -53,24 +62,36 @@ SEND_TO_BACKEND = True
 def send_to_api(url, payload):
     """
     Helper function to send JSON data to the backend via HTTP POST.
-    Uses Python's built-in urllib so no external libraries are needed.
+    Uses Python's built-in urllib with multi-port fallback.
     """
     if not SEND_TO_BACKEND:
         return
 
-    try:
-        data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
-        with urllib.request.urlopen(req, timeout=1.5) as response:
-            pass  # Successfully received by backend
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ConnectionRefusedError, OSError):
-        # Silently continue if backend is not running yet
-        pass
+    targets = [url]
+    if "5000" in url:
+        targets.append(url.replace("5000", "8000"))
+    elif "8000" in url:
+        targets.append(url.replace("8000", "5000"))
+
+    if "/api/sensor-data" in url:
+        targets.append(url.replace("/api/sensor-data", "/api/telemetry"))
+    elif "/api/telemetry" in url:
+        targets.append(url.replace("/api/telemetry", "/api/sensor-data"))
+
+    for target_url in targets:
+        try:
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                target_url,
+                data=data,
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=1.5) as response:
+                if response.status in [200, 201, 202]:
+                    return  # Successfully delivered
+        except Exception:
+            continue
 
 
 # -----------------------------------------------------------------------------
@@ -151,6 +172,7 @@ class BharatiSimulator:
             "station_name": STATION_NAME,
             "temperature": round(self.temperature, 1),
             "battery": round(self.battery, 1),
+            "battery_level": round(self.battery, 1),
             "power_consumption": round(self.power_consumption, 1),
             "generator_temperature": round(self.generator_temperature, 1),
             "generator_status": self.generator_status,

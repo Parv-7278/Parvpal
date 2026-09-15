@@ -1,7 +1,23 @@
 import os
+import urllib.request
+import urllib.error
 
-# Backend API endpoint configuration (FastAPI default :8000, Express fallback :5000)
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+# Backend API endpoint configuration (Node.js default :5000, FastAPI fallback :8000)
+_env_backend = os.getenv("BACKEND_URL")
+if _env_backend:
+    BACKEND_URL = _env_backend
+else:
+    # Auto-detect active backend
+    BACKEND_URL = "http://localhost:5000"
+    for port in [5000, 8000]:
+        try:
+            req = urllib.request.Request(f"http://localhost:{port}/api/health", method="GET")
+            with urllib.request.urlopen(req, timeout=0.6):
+                BACKEND_URL = f"http://localhost:{port}"
+                break
+        except Exception:
+            continue
+
 TELEMETRY_ENDPOINT = f"{BACKEND_URL}/api/telemetry"
 ALERT_ENDPOINT = f"{BACKEND_URL}/api/alerts"
 

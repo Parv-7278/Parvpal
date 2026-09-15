@@ -391,3 +391,188 @@ class AlertItem(BaseModel):
     acknowledged: bool = False
     status_color: str = "#ef4444"
 
+# ==============================================================================
+# 11. 24-HOUR COMPREHENSIVE OPERATIONAL & RESEARCH REPORT SCHEMAS
+# ==============================================================================
+
+class MetricComparisonDelta(BaseModel):
+    label: str
+    current_value: str
+    previous_value: str
+    delta_value: str
+    change_pct: float
+    direction: str  # 'UP', 'DOWN', 'STABLE'
+    status_type: str = "nominal"  # 'nominal', 'warning', 'critical', 'positive'
+    interpretation: Optional[str] = None
+
+class SubsystemHealthDelta(BaseModel):
+    id: str
+    label: str
+    current_score: int
+    previous_score: int
+    delta: int
+    change_pct: float
+    status: str
+    color: str
+
+class ExecutiveSummaryReport(BaseModel):
+    report_title: str = "POLARIS 24-HOUR OPERATIONAL & RESEARCH REPORT"
+    station_id: str
+    station_name: str
+    reporting_period: str
+    comparison_period: str
+    overall_status: str  # 'NORMAL', 'WARNING', 'CRITICAL'
+    overall_risk_score: int = Field(ge=0, le=100)
+    ai_summary: str
+    ai_label: str = "AI-GENERATED SUMMARY"
+    recommendations: List[str]
+
+class StationHealthReport(BaseModel):
+    current_health_score: int
+    previous_health_score: int
+    change_pct: float
+    rating: str
+    rating_color: str
+    subsystems: List[SubsystemHealthDelta]
+    active_warnings_count: int
+    critical_systems_count: int
+    active_alerts: List[Dict[str, Any]] = []
+
+class EnergyReport(BaseModel):
+    status: str
+    generation_avg_kw: float
+    generation_max_kw: float
+    generation_min_kw: float
+    generation_delta_pct: float
+    consumption_avg_kw: float
+    peak_consumption_kw: float
+    consumption_min_kw: float
+    consumption_delta_pct: float
+    surplus_avg_kw: float
+    battery_current_pct: float
+    battery_min_pct: float
+    battery_max_pct: float
+    battery_change_pct: float
+    battery_health_pct: float
+    battery_reserve_days: str
+    generator_status: str
+    generator_temp_max_c: float
+    generator_temp_avg_c: float
+    generator_temp_delta_c: float
+    fuel_liters: str
+    fuel_days_remaining: str
+    fuel_change_pct: float
+    sources: Dict[str, Any]
+    breakdown: List[Dict[str, Any]]
+    comparisons: List[MetricComparisonDelta]
+    ai_insight: str
+
+class EnvironmentReport(BaseModel):
+    temp_avg_c: float
+    temp_min_c: float
+    temp_max_c: float
+    temp_delta_c: float
+    temp_trend: str
+    wind_avg_kmh: float
+    wind_max_kmh: float
+    wind_min_kmh: float
+    wind_dir: str
+    wind_delta_kmh: float
+    wind_trend: str
+    pressure_avg_hpa: float
+    pressure_min_hpa: float
+    pressure_max_hpa: float
+    pressure_trend: str
+    humidity_avg_pct: float
+    snow_accumulation_24h_cm: float
+    snow_total_depth_cm: float
+    snow_drift_rate_cm_hr: float
+    snow_delta_cm: float
+    anomalies: List[Dict[str, Any]]
+    comparisons: List[MetricComparisonDelta]
+    ai_interpretation: str
+
+class ResearchFinding(BaseModel):
+    major_trend: str
+    major_anomaly: str
+    attention_parameter: str
+
+class ResearchReport(BaseModel):
+    observatory_name: str
+    seismic: Dict[str, Any]
+    snow_firn: Dict[str, Any]
+    geomagnetic: Dict[str, Any]
+    crew_vitals: Dict[str, Any]
+    findings: ResearchFinding
+    scientific_telemetry_summary: str
+
+class LogisticsItemReport(BaseModel):
+    id: str
+    name: str
+    current_amount: str
+    percent: float
+    days_remaining: str
+    consumption_24h: str
+    change_pct: float
+    status: str
+    color: str
+
+class LogisticsReport(BaseModel):
+    items: List[LogisticsItemReport]
+    critical_inventory_count: int
+    low_stock_items: List[str]
+    depletion_forecast_date: str
+    ai_insight: str
+
+class InfrastructureModuleReport(BaseModel):
+    id: str
+    name: str
+    status: str
+    status_type: str
+    temperature: str
+    power_draw: str
+    subsystem: str
+    notes: str
+    maintenance_health: Optional[str] = None
+    next_inspection: Optional[str] = None
+
+class InfrastructureReport(BaseModel):
+    modules_count: int
+    modules: List[InfrastructureModuleReport]
+    operational_count: int
+    warning_count: int
+    critical_count: int
+    infrastructure_health_score: int
+    ai_insight: str
+
+class SingleStation24hReport(BaseModel):
+    station_id: str
+    station_name: str
+    generated_at: str
+    reporting_period: str
+    comparison_period: str
+    executive_summary: ExecutiveSummaryReport
+    station_health: StationHealthReport
+    energy: EnergyReport
+    environment: EnvironmentReport
+    research: ResearchReport
+    logistics: LogisticsReport
+    infrastructure: InfrastructureReport
+
+class Comprehensive24hReportResponse(BaseModel):
+    success: bool
+    station_id: str
+    station_name: str
+    generated_at: str
+    reporting_period: str
+    comparison_period: str
+    data_points_analyzed: int
+    overall_status: str
+    overall_risk_score: int
+    ai_provider: str
+    report: SingleStation24hReport
+    station_reports: Optional[Dict[str, SingleStation24hReport]] = None
+    combined_summary: Optional[Dict[str, Any]] = None
+    comparison_matrix: Optional[List[Dict[str, Any]]] = None
+
+

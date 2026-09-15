@@ -45,6 +45,7 @@ class StationSensorModel:
             "station_id": self.station_id,
             "station_name": self.name,
             "temperature": round(self.state["temperature"], 2),
+            "battery": round(self.state["battery_level"], 2),
             "battery_level": round(self.state["battery_level"], 2),
             "power_consumption": round(self.state["power_consumption"], 2),
             "generator_status": self.state["generator_status"],

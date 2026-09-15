@@ -15,8 +15,17 @@ Formulas (Clearly labeled as Simulated Latency):
   total latency = received time - created time
 """
 
+import sys
 import time
 from datetime import datetime, timezone
+
+# Fix Windows console UTF-8 UnicodeEncodeError
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 # 1. Define Priority Levels
 CRITICAL = 1

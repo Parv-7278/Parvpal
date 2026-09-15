@@ -11,6 +11,7 @@ exports.getAIAnalystStatus = async (req, res) => {
       'anomalies',
       'correlations',
       'summary',
+      'summary_24h',
       'compare',
       'forecast',
       'energy_env',
@@ -19,6 +20,25 @@ exports.getAIAnalystStatus = async (req, res) => {
     station_security_enforced: true,
   });
 };
+
+exports.generate24hSummaryReport = async (req, res) => {
+  try {
+    const { station_id = 'station-maitri' } = req.body;
+    const userRole = req.headers['x-user-role'] || 'india_operator';
+    const userStation = req.headers['x-station-id'] || null;
+
+    const result = await AIAnalystService.generate24hReport(station_id, userRole, userStation);
+    res.json(result);
+  } catch (err) {
+    console.error('[24h Report Error]:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate 24-hour operational report.',
+      error: err.message,
+    });
+  }
+};
+
 
 exports.analyzeResearchData = async (req, res) => {
   try {

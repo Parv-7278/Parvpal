@@ -56,7 +56,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTelemetry } from '../context/TelemetryContext';
 import { useModal } from '../context/ModalContext';
-import { analyzeResearchData, askResearchAI, getAIAnalystStatus } from '../services/api';
+import { analyzeResearchData, askResearchAI, getAIAnalystStatus, generate24HourReport } from '../services/api';
+import SummaryReportModal from './SummaryReportModal';
 
 export default function ResearchView({ selectedStation = 'station-maitri', onSelectStation }) {
   const { profile, isIndiaOperator, isStationOperator, assignedStation } = useAuth();
@@ -100,6 +101,59 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
 
+  // 24-Hour Comprehensive Summary Report State
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportGenerated, setReportGenerated] = useState(false);
+  const [summaryReportData, setSummaryReportData] = useState(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const handleGenerateSummaryReport = async (stationOverride) => {
+    setIsGeneratingReport(true);
+    try {
+      const targetStation = (typeof stationOverride === 'string' && stationOverride.trim() !== '')
+        ? stationOverride.trim()
+        : (selectedStation === 'all-stations' && isIndiaOperator
+            ? 'all-stations'
+            : effectiveStation);
+
+      const reportRes = await generate24HourReport(
+        { stationId: targetStation },
+        profile?.role,
+        profile?.assigned_station
+      );
+
+      setSummaryReportData(reportRes);
+      setReportGenerated(true);
+      setIsReportModalOpen(true);
+
+      const exec = reportRes.report?.executive_summary || reportRes.executive_summary || {};
+      const stName = reportRes.station_name || (targetStation.includes('bharati') ? 'Bharati' : targetStation.includes('all') ? 'All Antarctic Stations' : 'Maitri');
+      const aiText = `24-Hour Comprehensive Operational & Research Report compiled for ${stName}. Overall Station Status: ${exec.overall_status || 'NORMAL'} (Risk Index: ${exec.overall_risk_score ?? 18}/100). ${exec.ai_summary || 'All monitored modules synchronized.'}`;
+
+      setAiMessages(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: 'ai',
+          text: aiText,
+          hasReportAction: true,
+        }
+      ]);
+    } catch (err) {
+      console.error('Failed to generate summary report:', err);
+      setAiMessages(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: 'ai',
+          text: `Error compiling 24-hour report: ${err.message || 'Check database connection.'}`,
+        }
+      ]);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   // Time & Live Clock
   const [currentTimeStr, setCurrentTimeStr] = useState('12 Sep 2025 | 14:32 IST');
   useEffect(() => {
@@ -139,6 +193,13 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
     const userMsg = { id: Date.now(), sender: 'user', text: query };
     setAiMessages(prev => [...prev, userMsg]);
     setAiInput('');
+
+    const qLower = query.toLowerCase();
+    if (qLower.includes('summary report') || qLower.includes('24h report') || qLower.includes('24-hour report') || qLower.includes('operational report')) {
+      handleGenerateSummaryReport(effectiveStation);
+      return;
+    }
+
     setIsAiTyping(true);
 
     try {
@@ -148,18 +209,33 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         timeRange: '7d'
       }, profile?.role, profile?.assigned_station);
 
+      if (response?.hasReportAction && response?.summaryReportData) {
+        setSummaryReportData(response.summaryReportData);
+        setReportGenerated(true);
+      }
+
       const replyText = response?.answer || response?.summary || 
         `Analysis complete for ${stationDisplayName} Station: Subsurface cryosphere profiles indicate steady compaction. CryoSat-2 and NISAR interferometry models confirm localized ice shelf grounding line equilibrium.`;
 
-      setAiMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: replyText }]);
+      setAiMessages(prev => [
+        ...prev, 
+        { 
+          id: Date.now() + 1, 
+          sender: 'ai', 
+          text: replyText,
+          hasReportAction: !!response?.hasReportAction
+        }
+      ]);
     } catch (err) {
       let reply = `Analysis complete for ${stationDisplayName} Station: Subsurface cryosphere profiles indicate steady compaction. CryoSat-2 and NISAR interferometry models confirm localized ice shelf grounding line equilibrium.`;
+      let hasAction = false;
       if (query.toLowerCase().includes('past') || query.toLowerCase().includes('compare')) {
         reply = `Historical Comparison (2020-2025): ${stationDisplayName} Station thermal deviation is +0.42°C above the 5-year mean. Glacial accumulation rate remains within normal stochastic tolerance.`;
       } else if (query.toLowerCase().includes('summary') || query.toLowerCase().includes('report')) {
         reply = `Summary Synthesis: ${isBharati ? '8' : '12'} active research projects across Glaciology, Atmospheric Sciences, and Space Weather. Telemetry throughput 99.8% nominal via Ku-Band ISRO satellite downlink.`;
+        hasAction = true;
       }
-      setAiMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: reply }]);
+      setAiMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: reply, hasReportAction: hasAction }]);
     } finally {
       setIsAiTyping(false);
     }
@@ -306,11 +382,31 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           ==================================================================== */}
       <aside className="india-sidebar-col">
         
-        {/* Sidebar Header Title */}
+        {/* Sidebar Header Title & Station Switcher */}
         <div className="sidebar-header-badge">
           <span className="sidebar-station-prefix">
-            {isBharati ? 'BHARATI STATION' : 'MAITRI STATION - RESEARCH'}
+            {isBharati ? 'BHARATI STATION' : 'MAITRI STATION'}
           </span>
+          {isIndiaOperator && onSelectStation && (
+            <div className="sidebar-stn-switcher-mini">
+              <button
+                type="button"
+                className={`stn-mini-btn ${effectiveStation === 'station-maitri' && selectedStation !== 'all-stations' ? 'active' : ''}`}
+                onClick={() => onSelectStation('station-maitri')}
+                title="Switch to Maitri Station"
+              >
+                Maitri
+              </button>
+              <button
+                type="button"
+                className={`stn-mini-btn ${effectiveStation === 'station-bharati' ? 'active' : ''}`}
+                onClick={() => onSelectStation('station-bharati')}
+                title="Switch to Bharati Station"
+              >
+                Bharati
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Vertical Navigation Menu */}
@@ -674,55 +770,88 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
 
         {/* SUB-NAVIGATION TABS RIBBON */}
         <div className="research-subnav-ribbon">
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setSubTab('overview')}
-          >
-            Research Overview
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'projects' ? 'active' : ''}`}
-            onClick={() => setSubTab('projects')}
-          >
-            {isBharati ? 'Active Projects' : 'Projects'}
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'field' ? 'active' : ''}`}
-            onClick={() => setSubTab('field')}
-          >
-            Field Observations
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'data' ? 'active' : ''}`}
-            onClick={() => setSubTab('data')}
-          >
-            Data &amp; Analytics
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'publications' ? 'active' : ''}`}
-            onClick={() => setSubTab('publications')}
-          >
-            Publications
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'collaboration' ? 'active' : ''}`}
-            onClick={() => setSubTab('collaboration')}
-          >
-            {isBharati ? 'Collaborations' : 'Collaboration'}
-          </button>
-          <button 
-            type="button" 
-            className={`subnav-pill ${subTab === 'lab' ? 'active' : ''}`}
-            onClick={() => setSubTab('lab')}
-          >
-            {isBharati ? 'Equipment & Labs' : 'Lab & Equipment'}
-          </button>
+          <div className="subnav-left-pills">
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setSubTab('overview')}
+            >
+              Research Overview
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'projects' ? 'active' : ''}`}
+              onClick={() => setSubTab('projects')}
+            >
+              {isBharati ? 'Active Projects' : 'Projects'}
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'field' ? 'active' : ''}`}
+              onClick={() => setSubTab('field')}
+            >
+              Field Observations
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'data' ? 'active' : ''}`}
+              onClick={() => setSubTab('data')}
+            >
+              Data &amp; Analytics
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'publications' ? 'active' : ''}`}
+              onClick={() => setSubTab('publications')}
+            >
+              Publications
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'collaboration' ? 'active' : ''}`}
+              onClick={() => setSubTab('collaboration')}
+            >
+              {isBharati ? 'Collaborations' : 'Collaboration'}
+            </button>
+            <button 
+              type="button" 
+              className={`subnav-pill ${subTab === 'lab' ? 'active' : ''}`}
+              onClick={() => setSubTab('lab')}
+            >
+              {isBharati ? 'Equipment & Labs' : 'Lab & Equipment'}
+            </button>
+          </div>
+
+          {/* Quick Station Switcher */}
+          {isIndiaOperator && onSelectStation && (
+            <div className="research-station-toggle-group">
+              <span className="station-toggle-label">Station:</span>
+              <button
+                type="button"
+                className={`research-station-btn ${effectiveStation === 'station-maitri' && selectedStation !== 'all-stations' ? 'active' : ''}`}
+                onClick={() => onSelectStation('station-maitri')}
+                title="Switch to Maitri Station"
+              >
+                ❄️ Maitri
+              </button>
+              <button
+                type="button"
+                className={`research-station-btn ${effectiveStation === 'station-bharati' ? 'active' : ''}`}
+                onClick={() => onSelectStation('station-bharati')}
+                title="Switch to Bharati Station"
+              >
+                🏔️ Bharati
+              </button>
+              <button
+                type="button"
+                className={`research-station-btn ${selectedStation === 'all-stations' ? 'active' : ''}`}
+                onClick={() => onSelectStation('all-stations')}
+                title="View All Stations"
+              >
+                🇮🇳 All
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 5 TOP METRIC KPI CARDS HORIZONTAL STRIP */}
@@ -1277,9 +1406,21 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                   <Bot size={14} className="text-cyan" />
                 </div>
                 <div className="b-ai-message-text">
-                  {aiMessages[aiMessages.length - 1]?.text || 
-                    `Based on the latest satellite data and field observations, the ice shelf near Bharati Station shows a 12% increase in surface melting rate compared to last month. This may impact the planned drilling schedule for Project IceCore-3. I recommend increasing monitoring frequency in this region.`
-                  }
+                  <div>
+                    {aiMessages[aiMessages.length - 1]?.text || 
+                      `Based on the latest satellite data and field observations, the ice shelf near Bharati Station shows a 12% increase in surface melting rate compared to last month. This may impact the planned drilling schedule for Project IceCore-3. I recommend increasing monitoring frequency in this region.`
+                    }
+                  </div>
+                  {aiMessages[aiMessages.length - 1]?.hasReportAction && (
+                    <button 
+                      type="button"
+                      className="ai-view-report-inline-btn"
+                      style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: '6px', color: '#38bdf8', fontSize: '11px', cursor: 'pointer' }}
+                      onClick={() => setIsReportModalOpen(true)}
+                    >
+                      <FileText size={11} /> View Full 24-Hour Operational Report
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1291,8 +1432,32 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                 <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('Compare with past')}>
                   Compare with Past
                 </button>
-                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('Summary report')}>
-                  Summary Report
+                <button 
+                  type="button" 
+                  className={`b-ai-pill-btn summary-report-pill ${isGeneratingReport ? 'generating' : ''} ${reportGenerated && (summaryReportData?.station_id === 'station-bharati' || summaryReportData?.station_id === 'all-stations') ? 'generated' : ''}`}
+                  onClick={() => {
+                    if (summaryReportData && (summaryReportData.station_id === 'station-bharati' || summaryReportData.station_id === 'all-stations')) {
+                      setIsReportModalOpen(true);
+                    } else {
+                      handleGenerateSummaryReport('station-bharati');
+                    }
+                  }}
+                  disabled={isGeneratingReport}
+                  title="Generate AI-powered comprehensive 24-hour operational and research report for Bharati Station"
+                >
+                  {isGeneratingReport ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <RefreshCw size={11} className="animate-spin" />
+                      GENERATING 24-HOUR REPORT...
+                    </span>
+                  ) : reportGenerated && (summaryReportData?.station_id === 'station-bharati' || summaryReportData?.station_id === 'all-stations') ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                      <Check size={11} />
+                      REPORT GENERATED
+                    </span>
+                  ) : (
+                    'Summary Report'
+                  )}
                 </button>
               </div>
 
@@ -1570,7 +1735,18 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                           <Bot size={11} className="text-cyan" />
                         </div>
                       )}
-                      <p className="ai-msg-text">{msg.text}</p>
+                      <div>
+                        <p className="ai-msg-text">{msg.text}</p>
+                        {msg.hasReportAction && (
+                          <button 
+                            type="button"
+                            className="ai-view-report-inline-btn"
+                            onClick={() => setIsReportModalOpen(true)}
+                          >
+                            <FileText size={11} /> View Full 24-Hour Operational Report
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {isAiTyping && (
@@ -1588,8 +1764,32 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                   <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('Compare with past data')}>
                     Compare with Past
                   </button>
-                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('Generate summary report')}>
-                    Summary Report
+                  <button 
+                    type="button" 
+                    className={`ai-action-btn summary-report-btn ${isGeneratingReport ? 'generating' : ''} ${reportGenerated && (summaryReportData?.station_id === 'station-maitri' || summaryReportData?.station_id === 'all-stations') ? 'generated' : ''}`}
+                    onClick={() => {
+                      if (summaryReportData && (summaryReportData.station_id === 'station-maitri' || summaryReportData.station_id === 'all-stations')) {
+                        setIsReportModalOpen(true);
+                      } else {
+                        handleGenerateSummaryReport('station-maitri');
+                      }
+                    }}
+                    disabled={isGeneratingReport}
+                    title="Generate AI-powered comprehensive 24-hour operational and research report"
+                  >
+                    {isGeneratingReport ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <RefreshCw size={11} className="animate-spin" />
+                        GENERATING 24-HOUR REPORT...
+                      </span>
+                    ) : reportGenerated && (summaryReportData?.station_id === 'station-maitri' || summaryReportData?.station_id === 'all-stations') ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                        <Check size={11} />
+                        REPORT GENERATED
+                      </span>
+                    ) : (
+                      'Summary Report'
+                    )}
                   </button>
                 </div>
 
@@ -1665,6 +1865,16 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         </footer>
 
       </main>
+
+      {/* 24-Hour Operational & Research Report Modal */}
+      <SummaryReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        reportData={summaryReportData}
+        selectedStation={selectedStation === 'all-stations' && isIndiaOperator ? 'all-stations' : effectiveStation}
+        isLoading={isGeneratingReport}
+        onRegenerate={handleGenerateSummaryReport}
+      />
 
     </div>
   );

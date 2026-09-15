@@ -20,6 +20,9 @@ class AskQueryRequest(BaseModel):
     question: str = Field(..., description="User question e.g. 'What changed in Maitri over the last 7 days?'")
     time_range: str = Field(default="7d", description="Time window: '24h', '7d', '30d'")
 
+class Report24hRequest(BaseModel):
+    station_id: str = Field(default="station-maitri", description="Station ID ('station-maitri', 'station-bharati', 'all-stations')")
+
 @router.get("/status", summary="AI Research Analyst Engine Status")
 async def get_ai_analyst_status():
     """Returns AI Research Analyst operational status and system health."""
@@ -33,6 +36,7 @@ async def get_ai_analyst_status():
             "anomalies",
             "correlations",
             "summary",
+            "summary_24h",
             "compare",
             "forecast",
             "energy_env",
@@ -40,6 +44,37 @@ async def get_ai_analyst_status():
         ],
         "station_security_enforced": True
     }
+
+@router.post("/report-24h", summary="Generate Comprehensive 24-Hour Operational & Research Report")
+async def generate_24h_summary_report(
+    payload: Report24hRequest,
+    x_user_role: Optional[str] = Header(default="india_operator", alias="x-user-role"),
+    x_station_id: Optional[str] = Header(default=None, alias="x-station-id")
+):
+    """
+    Generates an AI-powered comprehensive 24-hour operational and research report.
+    Analyzes all modules (Health, Energy, Environment, Research, Logistics, Infrastructure),
+    calculates statistical deltas vs previous 24-hour window, and enforces strict station RBAC.
+    """
+    try:
+        result = await AIAnalystService.generate_24h_operational_report(
+            station_id=payload.station_id,
+            user_role=x_user_role,
+            user_station=x_station_id
+        )
+        return result
+    except PermissionError as pe:
+        logger.warning(f"[Security] Station authorization failed: {pe}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(pe)
+        )
+    except Exception as e:
+        logger.error(f"[AI Analyst] Error generating 24h report: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating 24-hour operational report: {str(e)}"
+        )
 
 @router.post("/analyze", summary="Run Comprehensive AI Research Analysis")
 async def analyze_research_data(
@@ -51,6 +86,20 @@ async def analyze_research_data(
     Analyzes historical and current research/telemetry data from Supabase PostgreSQL.
     Enforces station-level role-based authorization (HTTP 403 on permission breach).
     """
+    # If 24h summary report is specifically requested via analyze endpoint
+    if payload.analysis_type in ["summary_24h", "24h_report", "report_24h"]:
+        try:
+            return await AIAnalystService.generate_24h_operational_report(
+                station_id=payload.station_id,
+                user_role=x_user_role,
+                user_station=x_station_id
+            )
+        except PermissionError as pe:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(pe)
+            )
+
     # Authorization Guard
     is_authorized = AIAnalystService.validate_station_access(
         user_role=x_user_role,
@@ -111,6 +160,13 @@ async def ask_research_ai(
     try:
         # Determine intent
         q_lower = payload.question.lower()
+        if "summary report" in q_lower or "24-hour report" in q_lower or "24h report" in q_lower:
+            return await AIAnalystService.generate_24h_operational_report(
+                station_id=payload.station_id,
+                user_role=x_user_role,
+                user_station=x_station_id
+            )
+
         analysis_type = "summary"
         if "compare" in q_lower or "vs" in q_lower:
             analysis_type = "compare"
@@ -138,3 +194,4 @@ async def ask_research_ai(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error executing AI research question: {str(e)}"
         )
+

@@ -3,7 +3,7 @@
  * Provides continuous telemetry drift & emergency scenario simulations for Maitri and Bharati.
  */
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 const TELEMETRY_ENDPOINT = `${BACKEND_URL}/api/telemetry`;
 const ALERT_ENDPOINT = `${BACKEND_URL}/api/alerts`;
 
@@ -12,6 +12,7 @@ const STATIONS = {
     name: 'Maitri Research Station',
     state: {
       temperature: -18.7,
+      battery: 74.0,
       battery_level: 74.0,
       power_consumption: 105.0,
       generator_status: 'RUNNING',
@@ -25,6 +26,7 @@ const STATIONS = {
     name: 'Bharati Research Station',
     state: {
       temperature: -14.2,
+      battery: 91.0,
       battery_level: 91.0,
       power_consumption: 148.0,
       generator_status: 'RUNNING',
@@ -37,17 +39,28 @@ const STATIONS = {
 };
 
 async function postJson(url, data) {
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return await res.json();
-  } catch (err) {
-    console.error(`[SIMULATOR ERROR] Connection refused: ${url} (${err.message})`);
-    return null;
+  const targets = [url];
+  if (url.includes('5000')) targets.push(url.replace('5000', '8000'));
+  else if (url.includes('8000')) targets.push(url.replace('8000', '5000'));
+
+  if (url.includes('/api/telemetry')) targets.push(url.replace('/api/telemetry', '/api/sensor-data'));
+
+  for (const target of targets) {
+    try {
+      const res = await fetch(target, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      // try next target
+    }
   }
+  console.error(`[SIMULATOR ERROR] Connection refused for: ${url}`);
+  return null;
 }
 
 async function runGeneratorThermalRunaway(stationId = 'station-maitri') {

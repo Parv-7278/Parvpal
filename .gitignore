@@ -10,6 +10,14 @@ venv/
 .venv/
 env/
 
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+
 # IDE & OS
 .vscode/
 .idea/

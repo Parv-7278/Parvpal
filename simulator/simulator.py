@@ -1,36 +1,100 @@
+import os
+import sys
 import argparse
 import time
-import requests
-import sys
+import json
+import urllib.request
+import urllib.error
+
+# Fix Windows console UTF-8 UnicodeEncodeError
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+# Ensure simulator directory is in sys.path regardless of working directory
+_SIMULATOR_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SIMULATOR_DIR not in sys.path:
+    sys.path.insert(0, _SIMULATOR_DIR)
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 from config import STATIONS, TELEMETRY_ENDPOINT, ALERT_ENDPOINT, TELEMETRY_INTERVAL_SECONDS
 from sensors import StationSensorModel
 from scenarios import run_generator_thermal_runaway, run_blizzard_warning
 
+def _http_post(url, payload):
+    """Resilient HTTP POST supporting both requests and urllib standard library."""
+    if HAS_REQUESTS:
+        try:
+            res = requests.post(url, json=payload, timeout=2.0)
+            return res.status_code, res.text
+        except Exception:
+            pass
+
+    # Fallback to urllib.request
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=2.0) as res:
+            return res.status, res.read().decode('utf-8')
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode('utf-8')
+    except Exception as e:
+        return 0, str(e)
+
 def send_telemetry(payload):
-    st_name = "MAITRI" if "maitri" in payload['station_id'] else "BHARATI"
+    st_name = "MAITRI" if "maitri" in payload.get('station_id', '') else "BHARATI"
     temp = payload.get('temperature', 0)
     gen_temp = payload.get('generator_temperature', 0)
     batt = payload.get('battery_level') or payload.get('battery') or 0
-    try:
-        response = requests.post(TELEMETRY_ENDPOINT, json=payload, timeout=3.0)
-        if response.status_code in [200, 201, 202]:
-            print(f"[SIMULATOR] Station: {st_name} | Sending telemetry... | Temp: {temp}°C | Gen: {gen_temp}°C | Battery: {batt}% | Response: 200 OK")
-        else:
-            print(f"[SIMULATOR WARNING] Station: {st_name} | Backend returned {response.status_code} ({response.text})")
-    except requests.exceptions.RequestException as e:
-        print(f"[SIMULATOR ERROR] Connection failed for {st_name} to {TELEMETRY_ENDPOINT}: {e}")
+
+    endpoints_to_try = [
+        TELEMETRY_ENDPOINT,
+        "http://localhost:5000/api/telemetry",
+        "http://localhost:5000/api/sensor-data",
+        "http://localhost:8000/api/telemetry",
+    ]
+    # Remove duplicate endpoints preserving order
+    seen = set()
+    endpoints = [x for x in endpoints_to_try if not (x in seen or seen.add(x))]
+
+    for endpoint in endpoints:
+        status_code, text = _http_post(endpoint, payload)
+        if status_code in [200, 201, 202]:
+            print(f"[SIMULATOR] Station: {st_name} | Temp: {temp}°C | Gen: {gen_temp}°C | Battery: {batt}% | Status: {status_code} OK (-> {endpoint})", flush=True)
+            return
+    
+    print(f"[SIMULATOR ERROR] Connection failed for {st_name} to endpoints: {endpoints}", flush=True)
 
 def send_alert(payload):
-    st_name = "MAITRI" if "maitri" in payload['station_id'] else "BHARATI"
-    try:
-        response = requests.post(ALERT_ENDPOINT, json=payload, timeout=3.0)
-        if response.status_code in [200, 201, 202]:
-            print(f"[SIMULATOR ALERT] 🚨 {st_name} PRIORITY ALERT DISPATCHED: {payload.get('priority')} -> {payload.get('message')}")
-        else:
-            print(f"[SIMULATOR WARNING] Alert dispatch returned {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"[SIMULATOR ERROR] Alert dispatch failed to {ALERT_ENDPOINT}: {e}")
+    st_name = "MAITRI" if "maitri" in payload.get('station_id', '') else "BHARATI"
+    endpoints_to_try = [
+        ALERT_ENDPOINT,
+        "http://localhost:5000/api/alerts",
+        "http://localhost:8000/api/alerts",
+    ]
+    seen = set()
+    endpoints = [x for x in endpoints_to_try if not (x in seen or seen.add(x))]
+
+    for endpoint in endpoints:
+        status_code, text = _http_post(endpoint, payload)
+        if status_code in [200, 201, 202]:
+            print(f"[SIMULATOR ALERT] 🚨 {st_name} PRIORITY ALERT DISPATCHED: {payload.get('priority')} -> {payload.get('message')}", flush=True)
+            return
+
+    print(f"[SIMULATOR ERROR] Alert dispatch failed to endpoints: {endpoints}", flush=True)
 
 def main():
     parser = argparse.ArgumentParser(description="Antarctic Research Station Sensor Simulator")
@@ -48,11 +112,11 @@ def main():
         for s_id, s_meta in STATIONS.items()
     }
 
-    print("==================================================================")
-    print("🏔️  [SIMULATOR] Starting POLARIS Station Telemetry Simulator")
-    print(f"📡 Target Endpoint: {TELEMETRY_ENDPOINT}")
-    print(f"🚨 Alert Endpoint:  {ALERT_ENDPOINT}")
-    print("==================================================================")
+    print("==================================================================", flush=True)
+    print("🏔️  [SIMULATOR] Starting POLARIS Station Telemetry Simulator", flush=True)
+    print(f"📡 Target Endpoint: {TELEMETRY_ENDPOINT}", flush=True)
+    print(f"🚨 Alert Endpoint:  {ALERT_ENDPOINT}", flush=True)
+    print("==================================================================", flush=True)
 
     # If a specific scenario is requested
     if args.scenario == "generator_overheat":
@@ -65,7 +129,7 @@ def main():
         return
 
     # Continuous background telemetry loop
-    print("\n▶️  [SIMULATOR] Starting normal multi-station telemetry loop...\n")
+    print("\n▶️  [SIMULATOR] Starting normal multi-station telemetry loop...\n", flush=True)
     try:
         step_count = 0
         while True:
@@ -77,7 +141,7 @@ def main():
             time.sleep(args.interval)
 
     except KeyboardInterrupt:
-        print("\n⏹️ [SIMULATOR] Stopped by operator.")
+        print("\n⏹️ [SIMULATOR] Stopped by operator.", flush=True)
         sys.exit(0)
 
 if __name__ == "__main__":
