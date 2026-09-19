@@ -2,12 +2,13 @@
   "name": "antarctic-station-remote-management-monorepo",
   "version": "1.0.0",
   "description": "SIH 2026 Prototype: Digital Platform for Efficient Remote Management of Indian Antarctic Research Stations",
+  "type": "module",
   "workspaces": [
     "frontend",
     "backend"
   ],
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "node build.js",
     "start": "npm --prefix frontend run preview",
     "dev:backend": "npm --prefix backend run dev",
     "dev:fastapi": "uvicorn main:app --reload --port 8000 --app-dir fastapi_backend",
