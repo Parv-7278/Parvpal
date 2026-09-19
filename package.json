@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "SIH 2026 Prototype: Digital Platform for Efficient Remote Management of Indian Antarctic Research Stations",
   "scripts": {
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run preview",
     "dev:backend": "npm --prefix backend run dev",
     "dev:fastapi": "uvicorn main:app --reload --port 8000 --app-dir fastapi_backend",
     "dev:frontend": "npm --prefix frontend run dev",
