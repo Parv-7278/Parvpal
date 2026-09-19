@@ -33,6 +33,7 @@ import { ModalProvider, useModal } from './context/ModalContext';
 import { PredictiveProvider, usePredictive } from './context/PredictiveContext';
 import AIPredictionCenter from './components/AIPredictionCenter';
 import AIPredictionModal from './components/AIPredictionModal';
+import PolarisFlowDiagram from './components/PolarisFlowDiagram';
 import { STATIONS_DATA } from './data/stationsData';
 import './App.css';
 
