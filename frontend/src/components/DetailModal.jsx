@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   ShieldAlert, 
+  ShieldCheck,
   CheckCircle, 
   AlertTriangle, 
+  AlertOctagon,
   Thermometer, 
   Wind, 
   Zap, 
@@ -14,20 +16,32 @@ import {
   Minus,
   Sparkles,
   Layers,
-  Cpu,
-  Radio,
-  FileText,
-  BarChart3,
-  Flame,
-  BatteryCharging,
-  Maximize2
+  Cpu, 
+  Radio, 
+  FileText, 
+  BarChart3, 
+  Flame, 
+  BatteryCharging, 
+  Maximize2,
+  Compass,
+  Check,
+  Download,
+  Printer,
+  Droplets,
+  Database,
+  Satellite
 } from 'lucide-react';
 import { useTelemetry } from '../context/TelemetryContext';
+import { formatStationTime, getStationTimezoneLabel } from '../utils/timeUtils';
 import { useModal } from '../context/ModalContext';
+import ResearchAnalysisModal from './ResearchAnalysisModal';
+import HistoricalComparisonModal from './HistoricalComparisonModal';
+import SimulationReportModal from './SimulationReportModal';
 
 export default function DetailModal(props) {
   const modalContext = useModal();
   const { currentTelemetry, isSimulatorOnline, selectedStation } = useTelemetry();
+  const [mitigationDispatched, setMitigationDispatched] = useState(false);
 
   const isOpen = props.isOpen !== undefined ? props.isOpen : modalContext.modalState?.isOpen;
   const onClose = props.onClose || modalContext.closeModal;
@@ -62,6 +76,37 @@ export default function DetailModal(props) {
     station: stationName = selectedStation === 'station-bharati' ? 'Bharati Station' : 'Maitri Station',
     data,
   } = state;
+
+  if (type === 'SIMULATION_REPORT') {
+    return (
+      <SimulationReportModal
+        isOpen={isOpen}
+        onClose={onClose}
+        scenarioData={data}
+        selectedStation={stationName?.toLowerCase()?.includes('bharati') ? 'station-bharati' : 'station-maitri'}
+      />
+    );
+  }
+
+  if (type === 'RESEARCH_ANALYSIS') {
+    return (
+      <ResearchAnalysisModal
+        isOpen={isOpen}
+        onClose={onClose}
+        selectedStation={stationName?.toLowerCase()?.includes('bharati') ? 'station-bharati' : 'station-maitri'}
+      />
+    );
+  }
+
+  if (type === 'HISTORICAL_COMPARISON') {
+    return (
+      <HistoricalComparisonModal
+        isOpen={isOpen}
+        onClose={onClose}
+        selectedStation={stationName?.toLowerCase()?.includes('bharati') ? 'station-bharati' : 'station-maitri'}
+      />
+    );
+  }
 
   // Real-time live value binding from WebSocket telemetry if metricKey matches
   let liveValue = initialValue;
@@ -194,7 +239,7 @@ export default function DetailModal(props) {
                   </span>
                   <span className="drilldown-last-sync">
                     <Clock size={12} className="text-dim" />
-                    <span>Last Updated: {new Date().toLocaleTimeString()}</span>
+                    <span>Last Updated: {formatStationTime(new Date(), station)} ({getStationTimezoneLabel(station)})</span>
                   </span>
                 </div>
               </div>
@@ -363,66 +408,342 @@ export default function DetailModal(props) {
 
           {type === 'INSIGHT_DETAIL' && data && (
             <div className="modal-insight-detail">
-              <div className="insight-stat-banner">
-                <div className="i-stat">
-                  <span className="i-label">Risk Probability</span>
-                  <span className="i-val text-red mono-num">{data.riskLevel || '84% Probability'}</span>
+              <div className="sim-report-header-banner">
+                <div className="sim-report-badge-row">
+                  <span className="sim-report-tag">PREDICTIVE INTELLIGENCE ALERT</span>
+                  <span className="sim-report-category">{data.subsystem || 'STATION SCADA TELEMETRY'}</span>
+                  <span className={`sim-report-risk-badge ${(data.riskLevel?.includes('HIGH') || data.riskLevel?.includes('84%')) ? 'critical' : data.riskLevel?.includes('MEDIUM') ? 'warning' : 'optimal'}`} style={{ color: data.riskLevel?.includes('HARVEST') ? '#38bdf8' : undefined, background: data.riskLevel?.includes('HARVEST') ? 'rgba(56, 189, 248, 0.15)' : undefined, border: data.riskLevel?.includes('HARVEST') ? '1px solid rgba(56, 189, 248, 0.4)' : undefined }}>
+                    {data.riskLevel || 'ANOMALY DETECTED'}
+                  </span>
                 </div>
-                <div className="i-stat">
-                  <span className="i-label">Estimated Failure Window</span>
-                  <span className="i-val text-amber mono-num">{data.window || '4-8 Hours'}</span>
+                <h4 className="sim-report-title">{data.title || 'Predictive Subsystem Diagnostic'}</h4>
+                <p className="sim-report-desc">{data.description || 'Neural SCADA anomaly detection identified predictive deviation across station physical sensors.'}</p>
+              </div>
+
+              {/* Dynamic Parameter Grid */}
+              <div className="sim-report-kpis-grid">
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Estimated Window</span>
+                  <span className="rep-kpi-val text-amber mono-num">{data.window || '24 - 48 Hours'}</span>
+                  <span className="rep-kpi-sub">Forecast Horizon</span>
+                </div>
+
+                {data.vibration && (
+                  <div className="sim-rep-kpi-card">
+                    <span className="rep-kpi-lbl">Vibration Amplitude</span>
+                    <span className="rep-kpi-val text-red mono-num">{data.vibration}</span>
+                    <span className="rep-kpi-sub">Sensor: Piezo-Triaxial</span>
+                  </div>
+                )}
+
+                {data.temp && (
+                  <div className="sim-rep-kpi-card">
+                    <span className="rep-kpi-lbl">Thermal Core / Surface</span>
+                    <span className="rep-kpi-val text-cyan mono-num">{data.temp}</span>
+                    <span className="rep-kpi-sub">PT100 RTD Sensor</span>
+                  </div>
+                )}
+
+                {(data.windGusts || data.windSpeed) && (
+                  <div className="sim-rep-kpi-card">
+                    <span className="rep-kpi-lbl">Wind Vector / Gusts</span>
+                    <span className="rep-kpi-val text-cyan mono-num">{data.windGusts || data.windSpeed}</span>
+                    <span className="rep-kpi-sub">Ultrasonic Anemometer</span>
+                  </div>
+                )}
+
+                {data.powerDraw && (
+                  <div className="sim-rep-kpi-card">
+                    <span className="rep-kpi-lbl">Power Draw / Yield</span>
+                    <span className="rep-kpi-val text-amber mono-num">{data.powerDraw}</span>
+                    <span className="rep-kpi-sub">Heating / Microgrid Circuit</span>
+                  </div>
+                )}
+
+                {data.iceThickness && (
+                  <div className="sim-rep-kpi-card">
+                    <span className="rep-kpi-lbl">Ice / Rime Layer</span>
+                    <span className="rep-kpi-val text-cyan mono-num">{data.iceThickness}</span>
+                    <span className="rep-kpi-sub">Optical / Laser Sensor</span>
+                  </div>
+                )}
+
+                {data.cargoManifest && (
+                  <div className="sim-rep-kpi-card" style={{ gridColumn: 'span 2' }}>
+                    <span className="rep-kpi-lbl">Expedition Cargo Manifest</span>
+                    <span className="rep-kpi-val text-emerald mono-num" style={{ fontSize: '0.82rem' }}>{data.cargoManifest}</span>
+                    <span className="rep-kpi-sub">Polar Resupply Vessel</span>
+                  </div>
+                )}
+
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">AI Model Confidence</span>
+                  <span className="rep-kpi-val text-emerald mono-num">98.4%</span>
+                  <span className="rep-kpi-sub">Random Forest Ensembles</span>
                 </div>
               </div>
 
-              <div className="recommendation-callout">
-                <h4 className="rec-title">AI Actionable Recommendation:</h4>
-                <p className="rec-body">{data.recommendation || 'Initiate load shedding to reduce thermal strain on primary inverter.'}</p>
+              {/* Actionable Recommendation */}
+              <div className="sim-directives-box">
+                <div className="directive-block">
+                  <span className="dir-tag text-cyan">AI ENGINEERING DIRECTIVE &amp; MITIGATION:</span>
+                  <p className="dir-text">{data.recommendation || 'Initiate load shedding to reduce thermal strain on primary inverter.'}</p>
+                </div>
+              </div>
+
+              {/* Actions Bar */}
+              <div className="drilldown-actions-bar">
+                <button 
+                  type="button" 
+                  className="btn-drilldown-primary" 
+                  onClick={() => setMitigationDispatched(true)}
+                >
+                  <ShieldCheck size={14} className={mitigationDispatched ? 'text-emerald' : ''} />
+                  <span>{mitigationDispatched ? '✓ Mitigation Dispatched to SCADA PLCs' : 'Apply SCADA Mitigation Protocol'}</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-drilldown-secondary" 
+                  onClick={() => {
+                    const jsonContent = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `POLARIS_Insight_${(data.title || 'Diagnostic').replace(/\s+/g, '_')}.json`;
+                    a.click();
+                  }}
+                >
+                  <Download size={13} />
+                  <span>Download JSON</span>
+                </button>
+                <button type="button" className="btn-drilldown-secondary" onClick={() => window.print()}>
+                  <Printer size={13} />
+                  <span>Print Dossier</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {type === 'FORECAST' && (
+            <div className="modal-simulation-report">
+              <div className="sim-report-header-banner">
+                <div className="sim-report-badge-row">
+                  <span className="sim-report-tag">POLAR METEOROLOGY &amp; ATMOSPHERE</span>
+                  <span className="sim-report-category">IMD / ECMWF SYNOPTIC MODEL</span>
+                  <span className="sim-report-risk-badge optimal">7-DAY FORECAST SYNC</span>
+                </div>
+                <h4 className="sim-report-title">Detailed Polar Meteorological Forecast ({stationName})</h4>
+                <p className="sim-report-desc">Synoptic numerical weather prediction model output integrated with station AWS microclimate telemetry.</p>
+              </div>
+
+              <div className="sim-report-kpis-grid">
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Current Temperature</span>
+                  <span className="rep-kpi-val text-cyan mono-num">{data?.temp ?? '-24.2°C'}</span>
+                  <span className="rep-kpi-sub">Wind Chill: -38.6°C</span>
+                </div>
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Katabatic Wind Speed</span>
+                  <span className="rep-kpi-val text-amber mono-num">{data?.windSpeed ?? '38 km/h'}</span>
+                  <span className="rep-kpi-sub">Max Gust: 64 km/h</span>
+                </div>
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Barometric Pressure</span>
+                  <span className="rep-kpi-val text-emerald mono-num">{data?.pressure ?? '984 hPa'}</span>
+                  <span className="rep-kpi-sub">Tendency: Steady (+0.4 hPa/3h)</span>
+                </div>
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Optical Visibility</span>
+                  <span className="rep-kpi-val text-cyan mono-num">{data?.visibility ?? '15 km'}</span>
+                  <span className="rep-kpi-sub">Horizon Clear</span>
+                </div>
+              </div>
+
+              <div className="sim-report-table-box">
+                <h5 className="sim-table-heading">7-Day Synoptic Polar Outlook</h5>
+                <div className="sim-report-table">
+                  <div className="sim-rep-row header">
+                    <span>Forecast Day</span>
+                    <span>Expected Temp</span>
+                    <span>Wind &amp; Gusts</span>
+                    <span>Weather Hazard</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Day 1 (Today)</span>
+                    <span className="mono-num text-cyan">-24°C / -18°C</span>
+                    <span className="mono-num">35 km/h ESE</span>
+                    <span className="text-green font-bold">NOMINAL</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Day 2 (Tomorrow)</span>
+                    <span className="mono-num text-cyan">-26°C / -20°C</span>
+                    <span className="mono-num text-amber">52 km/h Gusts</span>
+                    <span className="text-amber font-bold">MODERATE KATABATIC</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Day 3</span>
+                    <span className="mono-num text-cyan">-29°C / -22°C</span>
+                    <span className="mono-num text-red">78 km/h Gale</span>
+                    <span className="text-critical font-bold">BLIZZARD WATCH</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Day 4</span>
+                    <span className="mono-num text-cyan">-31°C / -24°C</span>
+                    <span className="mono-num">44 km/h</span>
+                    <span className="text-amber font-bold">ELEVATED COLD</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Day 5 – 7</span>
+                    <span className="mono-num text-cyan">-25°C / -19°C</span>
+                    <span className="mono-num">28 km/h Calm</span>
+                    <span className="text-green font-bold">FAVORABLE WINDOW</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sim-directives-box">
+                <div className="directive-block">
+                  <span className="dir-tag text-cyan">EXPEDITION METEOROLOGICAL ADVISORY:</span>
+                  <p className="dir-text">
+                    A low-pressure synoptic trough entering Queen Maud Land will increase katabatic wind shear on Day 3. Outside scientific sorties and helicopter flight operations should be scheduled before 16:00 tomorrow.
+                  </p>
+                </div>
               </div>
 
               <div className="drilldown-actions-bar">
-                <button className="btn-drilldown-primary" onClick={onClose}>Apply Recommended Mitigation</button>
-                <button className="btn-drilldown-secondary" onClick={onClose}>Dismiss</button>
+                <button type="button" className="btn-drilldown-primary" onClick={onClose}>
+                  Acknowledge &amp; Close
+                </button>
+                <button type="button" className="btn-drilldown-secondary" onClick={() => window.print()}>
+                  <Printer size={13} />
+                  <span>Print Meteorological Log</span>
+                </button>
               </div>
             </div>
           )}
 
           {type === 'SIMULATION_REPORT' && data && (
             <div className="modal-simulation-report">
-              <div className="sim-summary-box">
-                <h4>Scenario: {data.label || 'Generator Failure Dynamic Stress Test'}</h4>
-                <p>Digital Twin dynamic failure simulation projected against active Antarctic baseline.</p>
+              <div className="sim-report-header-banner">
+                <div className="sim-report-badge-row">
+                  <span className="sim-report-tag">POLARIS INCIDENT SIMULATION REPORT</span>
+                  <span className="sim-report-category">{data.category || 'DYNAMIC SCADA FAULT'}</span>
+                  <span className={`sim-report-risk-badge ${(data.params?.missionRisk === 'HIGH' || data.metrics?.risk === 'High') ? 'critical' : 'warning'}`}>
+                    {data.params?.missionRisk || data.metrics?.risk || 'MEDIUM'} RISK (Index: {data.params?.riskScore || 72}/100)
+                  </span>
+                </div>
+                <h4 className="sim-report-title">{data.name || data.label || 'Incident Simulation Analysis'}</h4>
+                <p className="sim-report-desc">{data.description || 'Deterministic thermodynamic model execution projected against active Antarctic station telemetry baseline.'}</p>
               </div>
 
-              <div className="sim-report-table">
-                <div className="sim-rep-row header">
-                  <span>Subsystem</span>
-                  <span>Baseline</span>
-                  <span>Simulated State</span>
-                  <span>Status</span>
+              {/* Simulation KPIs */}
+              <div className="sim-report-kpis-grid">
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Available Power Delta</span>
+                  <span className="rep-kpi-val text-red mono-num">
+                    {data.params?.powerDropPct !== undefined ? (data.params.powerDropPct !== 0 ? `${data.params.powerDropPct}%` : '0% (Demand Surge)') : (data.metrics?.powerDelta || '-28%')}
+                  </span>
+                  <span className="rep-kpi-sub">Lost Cap: {data.params?.lostCapacityKw !== undefined ? `${data.params.lostCapacityKw} kW` : '46.2 kW'}</span>
                 </div>
-                <div className="sim-rep-row">
-                  <span>Diesel Generator G-01</span>
-                  <span>70 kW</span>
-                  <span>108 kW (Overload)</span>
-                  <span className="text-amber">Warning</span>
+
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Battery Reserve Horizon</span>
+                  <span className="rep-kpi-val text-amber mono-num">
+                    {data.params?.batteryHours ? `${data.params.batteryHours} Hours` : (data.metrics?.batteryReserve || '16.0 Hours')}
+                  </span>
+                  <span className="rep-kpi-sub">Autonomy Buffer</span>
                 </div>
-                <div className="sim-rep-row">
-                  <span>BESS Battery Storage</span>
-                  <span>98% SoC</span>
-                  <span>58% SoC in 6h</span>
-                  <span className="text-cyan">Discharging</span>
+
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Load-Shed Protocol</span>
+                  <span className="rep-kpi-val text-cyan mono-num">
+                    {data.metrics?.loadAction || 'Auto-Shed'}
+                  </span>
+                  <span className="rep-kpi-sub">Priority Grid Shed</span>
                 </div>
-                <div className="sim-rep-row">
-                  <span>Life Support Modules</span>
-                  <span>Nominal</span>
-                  <span>100% Protected</span>
-                  <span className="text-green">Secure</span>
+
+                <div className="sim-rep-kpi-card">
+                  <span className="rep-kpi-lbl">Hazard Score</span>
+                  <span className="rep-kpi-val text-critical mono-num">
+                    {data.params?.riskScore ? `${data.params.riskScore}/100` : '78/100'}
+                  </span>
+                  <span className="rep-kpi-sub">Mission Vulnerability</span>
                 </div>
               </div>
 
+              {/* Subsystems Impact Table */}
+              <div className="sim-report-table-box">
+                <h5 className="sim-table-heading">Subsystem Impact Matrix</h5>
+                <div className="sim-report-table">
+                  <div className="sim-rep-row header">
+                    <span>Subsystem Channel</span>
+                    <span>Baseline State</span>
+                    <span>Simulated State</span>
+                    <span>Severity</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Main Diesel Alternator (G-02)</span>
+                    <span>66 kW (Nominal)</span>
+                    <span>{data.id === 'GEN_FAIL' ? '0 kW (Thermal Seizure)' : '58 kW (Online)'}</span>
+                    <span className={data.id === 'GEN_FAIL' ? 'text-critical font-bold' : 'text-green'}>{data.id === 'GEN_FAIL' ? 'TRIPPED' : 'NOMINAL'}</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>BESS Energy Storage</span>
+                    <span>94% SoC</span>
+                    <span>{data.params?.batteryHours ? `Depleting (${data.params.batteryHours}h buffer)` : '58% SoC in 6h'}</span>
+                    <span className="text-amber font-bold">DISCHARGING</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>Life Support &amp; Habitation Heaters</span>
+                    <span>35 kW Continuous</span>
+                    <span>100% Protected (Isolated Bus)</span>
+                    <span className="text-green font-bold">SECURED</span>
+                  </div>
+                  <div className="sim-rep-row">
+                    <span>SATCOM &amp; RF Transceivers</span>
+                    <span>Active Carrier Lock</span>
+                    <span>{data.id === 'SATCOM_BLACKOUT' ? 'Loss of Lock (Kp 8+ Flare)' : 'Carrier Lock Maintained'}</span>
+                    <span className={data.id === 'SATCOM_BLACKOUT' ? 'text-critical font-bold' : 'text-green'}>{data.id === 'SATCOM_BLACKOUT' ? 'DEGRADED' : 'OPTIMAL'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Directives & Mitigation */}
+              <div className="sim-directives-box">
+                <div className="directive-block">
+                  <span className="dir-tag text-cyan">SCADA LOAD-SHED DIRECTIVE:</span>
+                  <p className="dir-text">{data.params?.loadShedRecommendation || data.metrics?.loadNote || 'Auto-shed non-critical laboratory and auxiliary quarters trace heaters.'}</p>
+                </div>
+                <div className="directive-block">
+                  <span className="dir-tag text-amber">MANDATORY OPERATOR MITIGATION:</span>
+                  <p className="dir-text">{data.params?.mitigationAction || 'Engage secondary standby power bus and notify Expedition Leader.'}</p>
+                </div>
+              </div>
+
+              {/* Export Toolbar */}
               <div className="drilldown-actions-bar">
-                <button className="btn-drilldown-primary" onClick={onClose}>Export Simulation Report</button>
-                <button className="btn-drilldown-secondary" onClick={onClose}>Close</button>
+                <button type="button" className="btn-drilldown-primary" onClick={onClose}>
+                  Acknowledge &amp; Close
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-drilldown-secondary" 
+                  onClick={() => {
+                    const jsonContent = JSON.stringify(data, null, 2);
+                    const blob = new Blob([jsonContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `POLARIS_Report_${(data.name || data.label || 'Simulation').replace(/\s+/g, '_')}.json`;
+                    a.click();
+                  }}
+                >
+                  Download JSON
+                </button>
+                <button type="button" className="btn-drilldown-secondary" onClick={() => window.print()}>
+                  Print / Save PDF
+                </button>
               </div>
             </div>
           )}

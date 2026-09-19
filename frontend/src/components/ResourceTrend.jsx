@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
-
 export default function ResourceTrend({ trendData, selectedStation = 'station-maitri' }) {
   const [selectedResource, setSelectedResource] = useState('Fuel');
-  const { openDrillDown } = useModal();
 
   const resourceOptions = ['Fuel', 'Food', 'Water', 'Medical Oxygen'];
 
@@ -37,34 +34,8 @@ export default function ResourceTrend({ trendData, selectedStation = 'station-ma
   const actualPoints = data.actualPoints || [[50,48], [95,58], [140,68], [185,78], [230,88]];
   const forecastPoints = data.forecastPoints || [[275,102], [320,118]];
 
-  const handleChartClick = () => {
-    openDrillDown({
-      title: `${selectedResource} 30-Day Trajectory & Depletion Forecast`,
-      type: 'DRILL_DOWN',
-      category: 'LOGISTICS_FORECAST',
-      currentValue: data.yMid,
-      unit: 'Remaining',
-      status: 'NORMAL',
-      interpretation: `Linear regression consumption trend for ${selectedResource}. Projected depletion date estimated at ${data.depletionDate}.`,
-      recommendation: 'Scheduled resupply traverse is confirmed within safe buffer window.',
-      station: stationName,
-      historicalData: [
-        { time: '25 Apr', value: 72, baseline: 50 },
-        { time: '2 May', value: 68, baseline: 50 },
-        { time: '9 May', value: 64, baseline: 50 },
-        { time: '16 May', value: 59, baseline: 50 },
-        { time: '23 May', value: 55, baseline: 50 },
-        { time: '30 May (Forecast)', value: 49, baseline: 50 },
-        { time: '6 Jun (Forecast)', value: 42, baseline: 50 }
-      ]
-    });
-  };
-
   return (
-    <div 
-      className="resource-trend-card polaris-card interactive-card"
-      onClick={handleChartClick}
-    >
+    <div className="resource-trend-card polaris-card">
       {/* Header with Selector */}
       <div className="card-header-with-selector">
         <span className="card-title">RESOURCE TREND (30 DAYS)</span>

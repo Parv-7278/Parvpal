@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { RefreshCw, Thermometer, Wind, CloudSnow, Eye, ExternalLink } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
+import { formatStationTime } from '../utils/timeUtils';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
 
-export default function EnvironmentalConditions({ weather, sparklines }) {
-  const { openDrillDown } = useModal();
+export default function EnvironmentalConditions({ weather, sparklines, selectedStation = 'station-maitri' }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState('12:45 PM');
+  const [lastUpdated, setLastUpdated] = useState(() => formatStationTime(new Date(), selectedStation, { hour: '2-digit', minute: '2-digit' }));
 
   const handleRefresh = (e) => {
     e.stopPropagation();
     setIsRefreshing(true);
     setTimeout(() => {
       const now = new Date();
-      setLastUpdated(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setLastUpdated(formatStationTime(now, selectedStation, { hour: '2-digit', minute: '2-digit' }));
       setIsRefreshing(false);
     }, 600);
   };
@@ -39,27 +39,13 @@ export default function EnvironmentalConditions({ weather, sparklines }) {
       icon: Thermometer,
       color: '#38bdf8',
       path: activeSparklines.temp || defaultSparklines.temp,
-      onDrillDown: () => openDrillDown({
-        title: 'Ambient Surface Temperature',
-        category: 'ENVIRONMENT',
-        metricKey: 'temperature',
-        currentValue: typeof weather?.temp === 'number' ? weather.temp : parseFloat(weather?.temp) || -18.7,
-        unit: '°C',
-        status: (weather?.temp && weather.temp < -25) ? 'WARNING' : 'NORMAL',
-        thresholds: { warning: '< -25.0 °C', critical: '< -35.0 °C' },
-        stats: { min: '-24.2 °C', avg: '-18.9 °C', max: '-12.1 °C' },
-        historicalData: [
-          { time: '00:00', val: -21.4 },
-          { time: '04:00', val: -22.8 },
-          { time: '08:00', val: -19.5 },
-          { time: '12:00', val: -17.2 },
-          { time: '16:00', val: -18.7 },
-          { time: '20:00', val: -20.1 },
-          { time: 'Now', val: typeof weather?.temp === 'number' ? weather.temp : -18.7 },
-        ],
-        interpretation: 'Thermal sensors at station perimeter indicate standard polar variance. Core habitat heating maintains nominal +21°C interior baseline.',
-        recommendation: 'Ensure external pipeline trace heaters remain energized continuously.',
-      }),
+      details: [
+        { label: 'Current Temp', value: currentTemp, color: '#38bdf8' },
+        { label: 'Wind Chill Index', value: '-32.4°C', color: '#60a5fa' },
+        { label: '24h High / Low', value: '-14.2°C / -24.8°C', color: '#94a3b8' },
+        { label: 'Inversion Layer', value: '+120m AGL', color: '#10b981' },
+      ],
+      interpretation: 'Polar surface thermal telemetry remains within seasonal winter operational ranges with slight evening radiative cooling.',
     },
     {
       id: 'wind',
@@ -68,27 +54,13 @@ export default function EnvironmentalConditions({ weather, sparklines }) {
       icon: Wind,
       color: '#0284c7',
       path: activeSparklines.wind || defaultSparklines.wind,
-      onDrillDown: () => openDrillDown({
-        title: 'Surface Wind & Katabatic Velocity',
-        category: 'ENVIRONMENT',
-        metricKey: 'wind_speed',
-        currentValue: parseFloat(weather?.windSpeed) || 28,
-        unit: 'km/h',
-        status: (parseFloat(weather?.windSpeed) > 60) ? 'WARNING' : 'NORMAL',
-        thresholds: { warning: '> 60 km/h', critical: '> 85 km/h (Blizzard)' },
-        stats: { min: '8 km/h', avg: '26 km/h', max: '68 km/h' },
-        historicalData: [
-          { time: '00:00', val: 14.5 },
-          { time: '04:00', val: 18.2 },
-          { time: '08:00', val: 24.0 },
-          { time: '12:00', val: 32.5 },
-          { time: '16:00', val: 28.0 },
-          { time: '20:00', val: 22.4 },
-          { time: 'Now', val: parseFloat(weather?.windSpeed) || 28 },
-        ],
-        interpretation: 'Katabatic wind flow from polar plateau remains sub-critical. Structural anchoring on communication radomes stable.',
-        recommendation: 'Check anemometer anti-icing elements during pre-blizzard checklist.',
-      }),
+      details: [
+        { label: 'Sustained Velocity', value: currentWind, color: '#0284c7' },
+        { label: 'Peak Gust (1h)', value: '44 km/h', color: '#f59e0b' },
+        { label: 'Vector Direction', value: 'South-Southwest (210°)', color: '#38bdf8' },
+        { label: 'Katabatic Index', value: 'Moderate Slope Flow', color: '#10b981' },
+      ],
+      interpretation: 'Katabatic airflow from the polar ice cap is steady with moderate turbulence on wind turbine nacelles.',
     },
     {
       id: 'snow',
@@ -97,27 +69,13 @@ export default function EnvironmentalConditions({ weather, sparklines }) {
       icon: CloudSnow,
       color: '#60a5fa',
       path: activeSparklines.snow || defaultSparklines.snow,
-      onDrillDown: () => openDrillDown({
-        title: 'Snow Drift & Precipitation Depth',
-        category: 'ENVIRONMENT',
-        metricKey: 'snow_accumulation',
-        currentValue: parseFloat(weather?.snowAccumulation) || 12,
-        unit: 'cm',
-        status: 'NORMAL',
-        thresholds: { warning: '> 30 cm / 24h', critical: '> 60 cm' },
-        stats: { min: '2 cm', avg: '11 cm', max: '19 cm' },
-        historicalData: [
-          { time: '00:00', val: 8.5 },
-          { time: '04:00', val: 9.2 },
-          { time: '08:00', val: 10.4 },
-          { time: '12:00', val: 11.8 },
-          { time: '16:00', val: 12.0 },
-          { time: '20:00', val: 12.0 },
-          { time: 'Now', val: parseFloat(weather?.snowAccumulation) || 12 },
-        ],
-        interpretation: 'Ultrasonic depth sensors confirm steady drift accumulation under the stilt module aerodynamics.',
-        recommendation: 'Auto-blowers scheduled for air intake plenum clearance at 06:00 UTC.',
-      }),
+      details: [
+        { label: 'Drift Depth', value: currentSnow, color: '#60a5fa' },
+        { label: '24h Accumulation', value: '+3.5 cm', color: '#38bdf8' },
+        { label: 'Snowpack Density', value: '380 kg/m³', color: '#94a3b8' },
+        { label: 'Airlock Ingress Clearance', value: 'Clear / De-Iced', color: '#10b981' },
+      ],
+      interpretation: 'Slight drifting noted along the western utility corridor; snow clearance teams on standard standby.',
     },
     {
       id: 'visibility',
@@ -126,27 +84,13 @@ export default function EnvironmentalConditions({ weather, sparklines }) {
       icon: Eye,
       color: '#a3e635',
       path: activeSparklines.visibility || defaultSparklines.visibility,
-      onDrillDown: () => openDrillDown({
-        title: 'Atmospheric Visibility & Optical Range',
-        category: 'ENVIRONMENT',
-        metricKey: 'visibility',
-        currentValue: parseFloat(weather?.visibility) || 4.8,
-        unit: 'km',
-        status: 'NORMAL',
-        thresholds: { warning: '< 1.5 km (Drift)', critical: '< 0.3 km (Whiteout)' },
-        stats: { min: '1.2 km', avg: '5.4 km', max: '15.0 km' },
-        historicalData: [
-          { time: '00:00', val: 6.2 },
-          { time: '04:00', val: 5.8 },
-          { time: '08:00', val: 4.5 },
-          { time: '12:00', val: 4.8 },
-          { time: '16:00', val: 5.0 },
-          { time: '20:00', val: 4.8 },
-          { time: 'Now', val: parseFloat(weather?.visibility) || 4.8 },
-        ],
-        interpretation: 'Forward-scatter optical sensor indicates clear operational corridor with light blowing snow.',
-        recommendation: 'Maintain runway guidance strobes on automatic standby mode.',
-      }),
+      details: [
+        { label: 'Optical Range', value: currentVis, color: '#a3e635' },
+        { label: 'Cloud Ceiling', value: '850m Overcast', color: '#94a3b8' },
+        { label: 'LIDAR Backscatter', value: '0.04 km⁻¹', color: '#38bdf8' },
+        { label: 'Aviation Status', value: 'VFR Caution', color: '#f59e0b' },
+      ],
+      interpretation: 'Atmospheric optical sensors indicate clear polar boundary layer with slight ice-crystal haze.',
     },
   ];
 
@@ -154,45 +98,66 @@ export default function EnvironmentalConditions({ weather, sparklines }) {
     <div className="environmental-conditions-section polaris-card">
       <div className="card-header-simple">
         <span className="card-title">ENVIRONMENTAL CONDITIONS</span>
-        <span className="card-subtitle-badge">CLICK TO EXPAND</span>
       </div>
 
       <div className="environmental-sparklines-list">
         {sparklineData.map((item) => {
           const Icon = item.icon;
           return (
-            <div 
-              key={item.id} 
-              className="env-sparkline-row clickable-drilldown-card"
-              onClick={item.onDrillDown}
-              title={`Click to inspect ${item.label} telemetry history`}
-            >
-              <div className="env-meta-wrap">
-                <div className="env-label-row">
-                  <Icon size={12} className="env-row-icon" />
-                  <span className="env-row-label">{item.label}</span>
-                </div>
-                {item.value && (
-                  <span className="env-row-value mono-num">{item.value}</span>
-                )}
-              </div>
-
-              {/* Sparkline Waveform SVG */}
-              <div className="sparkline-chart-wrap">
-                <svg viewBox="0 0 150 24" className="sparkline-svg" preserveAspectRatio="none">
+            <ExpandableTelemetryCard
+              key={item.id}
+              title={`${item.label} (${selectedStation === 'station-bharati' ? 'Bharati' : 'Maitri'})`}
+              category="METEOROLOGICAL SENSOR"
+              value={item.value}
+              status="nominal"
+              icon={Icon}
+              color={item.color}
+              subtext="Real-time automated Antarctic meteorological telemetry"
+              details={item.details}
+              sparkline={
+                <svg viewBox="0 0 380 60" style={{ width: '100%', height: '60px' }}>
                   <path
-                    d={item.path}
+                    d="M 0,35 Q 60,10 120,40 T 240,20 T 380,30"
                     fill="none"
                     stroke={item.color}
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    strokeWidth="2.5"
                   />
-                  {/* Glowing end point dot */}
-                  <circle cx="150" cy="9" r="2.5" fill={item.color} />
+                  <circle cx="380" cy="30" r="4" fill={item.color} />
                 </svg>
+              }
+              interpretation={item.interpretation}
+              recommendation="All external weather sensor telemetry is synchronized with the India HQ Central Database."
+              stationName={selectedStation}
+              className="env-sparkline-row-wrapper"
+            >
+              <div className="env-sparkline-row">
+                <div className="env-meta-wrap">
+                  <div className="env-label-row">
+                    <Icon size={12} className="env-row-icon" />
+                    <span className="env-row-label">{item.label}</span>
+                  </div>
+                  {item.value && (
+                    <span className="env-row-value mono-num">{item.value}</span>
+                  )}
+                </div>
+
+                {/* Sparkline Waveform SVG */}
+                <div className="sparkline-chart-wrap">
+                  <svg viewBox="0 0 150 24" className="sparkline-svg" preserveAspectRatio="none">
+                    <path
+                      d={item.path}
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* Glowing end point dot */}
+                    <circle cx="150" cy="9" r="2.5" fill={item.color} />
+                  </svg>
+                </div>
               </div>
-            </div>
+            </ExpandableTelemetryCard>
           );
         })}
       </div>

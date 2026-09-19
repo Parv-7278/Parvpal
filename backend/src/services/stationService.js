@@ -15,6 +15,8 @@ const STATION_METADATA = {
     commissioned_year: 1989,
     altitude: '117 m above sea level',
     environmentType: 'Inland Rocky Moraine (Lake Priyadarshini Oasis)',
+    timezone: 'UTC',
+    timezone_label: 'UTC+0',
     nominal_operating_limits: {
       generator_max_temp_c: 85.0,
       critical_temp_c: 90.0,
@@ -35,6 +37,8 @@ const STATION_METADATA = {
     commissioned_year: 2012,
     altitude: '35 m above sea level',
     environmentType: 'Coastal Antarctic Promontory (Prydz Bay Maritime)',
+    timezone: 'Antarctica/Mawson',
+    timezone_label: 'UTC+5',
     nominal_operating_limits: {
       generator_max_temp_c: 85.0,
       critical_temp_c: 90.0,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, 
   User, 
@@ -18,6 +18,7 @@ import {
   Globe2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AIPredictionIndicator from './AIPredictionIndicator';
 
 export default function Header({ 
   activeTab, 
@@ -30,6 +31,29 @@ export default function Header({
 }) {
   const { profile, isIndiaOperator, isStationOperator, assignedStation, loginWithDemoRole, logout } = useAuth();
   const [isStationDropdownOpen, setIsStationDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsStationDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isStationDropdownOpen) {
+        setIsStationDropdownOpen(false);
+      }
+    };
+    if (isStationDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isStationDropdownOpen]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -100,7 +124,7 @@ export default function Header({
         </div>
 
         {/* Station Selector Dropdown Pill */}
-        <div className="header-station-dropdown-wrap">
+        <div className="header-station-dropdown-wrap" ref={dropdownRef}>
           <button 
             type="button" 
             className="station-selector-dropdown-btn"
@@ -179,6 +203,9 @@ export default function Header({
 
       {/* Right Controls */}
       <div className="header-controls">
+        {/* AI Predictive Intelligence Header Pill */}
+        <AIPredictionIndicator compact={true} />
+
         {/* Notification Bell */}
         <button 
           className="notification-btn" 

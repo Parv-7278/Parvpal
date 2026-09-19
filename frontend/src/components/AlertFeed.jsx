@@ -2,9 +2,10 @@ import React from 'react';
 import { AlertTriangle, CheckCircle2, ShieldAlert, Clock, Trash2 } from 'lucide-react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { acknowledgeAlert, clearAllAlerts } from '../services/api';
+import { formatStationTime, getStationTimezoneLabel } from '../utils/timeUtils';
 
 export default function AlertFeed() {
-  const { alerts, refreshData } = useTelemetry();
+  const { alerts, refreshData, selectedStation } = useTelemetry();
 
   const handleAck = async (id) => {
     await acknowledgeAlert(id);
@@ -18,14 +19,15 @@ export default function AlertFeed() {
 
   return (
     <div className="alert-panel glass-panel">
-      <div className="panel-header">
-        <div className="panel-title-group">
-          <ShieldAlert className="text-warning" size={20} />
-          <h2>Prioritized Incident & Alert Log</h2>
+      <div className="alert-panel-header">
+        <div className="alert-header-title">
+          <ShieldAlert className="text-danger" size={18} />
+          <h3>Active Emergency Alerts</h3>
+          <span className="badge badge-pulse badge-danger">LIVE</span>
         </div>
         {alerts.length > 0 && (
-          <button onClick={handleClear} className="btn-secondary btn-small">
-            <Trash2 size={14} /> Clear All
+          <button onClick={handleClear} className="btn-clear-alerts" title="Clear all alerts">
+            <Trash2 size={14} /> Clear
           </button>
         )}
       </div>
@@ -40,6 +42,7 @@ export default function AlertFeed() {
           alerts.map((alert) => {
             const isCritical = alert.priority === 'CRITICAL';
             const isAck = alert.status === 'ACKNOWLEDGED';
+            const stId = alert.station_id || selectedStation;
 
             return (
               <div
@@ -58,7 +61,7 @@ export default function AlertFeed() {
                   </div>
                   <div className="alert-time mono-text">
                     <Clock size={12} />
-                    {new Date(alert.triggered_at).toLocaleTimeString()}
+                    {formatStationTime(alert.triggered_at, stId)} <span style={{ fontSize: '9px', opacity: 0.8 }}>({getStationTimezoneLabel(stId)})</span>
                   </div>
                 </div>
 

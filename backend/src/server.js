@@ -10,6 +10,7 @@ const stationRoutes = require('./routes/stationRoutes');
 const telemetryRoutes = require('./routes/telemetryRoutes');
 const simulatorRoutes = require('./routes/simulatorRoutes');
 const aiAnalystRoutes = require('./routes/aiAnalystRoutes');
+const predictionRoutes = require('./routes/predictionRoutes');
 const { defaultSatelliteLink } = require('./queue/satelliteLink');
 
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/stations', stationRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/simulator', simulatorRoutes);
 app.use('/api/research/ai-analyst', aiAnalystRoutes);
+app.use('/api/predictions', predictionRoutes);
 
 // 404 Catch-All Handler
 app.use((req, res) => {

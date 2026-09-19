@@ -5,12 +5,12 @@ import {
   Compass, 
   Droplets, 
   Gauge,
-  ArrowUpRight
+  ArrowUpRight,
+  Thermometer
 } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
 
-export default function WeatherOverview({ weather: weatherProp, onOpenForecast }) {
-  const { openDrillDown } = useModal();
+export default function WeatherOverview({ weather: weatherProp, onOpenForecast, selectedStation = 'Maitri Station' }) {
   const weather = weatherProp || {
     temp: '-18.7',
     unit: '°C',
@@ -21,193 +21,168 @@ export default function WeatherOverview({ weather: weatherProp, onOpenForecast }
     pressure: '987 hPa'
   };
 
-  const handleHeroClick = () => {
-    openDrillDown({
-      title: 'Surface Temperature & Chill Index',
-      category: 'ENVIRONMENT',
-      metricKey: 'temperature',
-      currentValue: typeof weather?.temp === 'number' ? weather.temp : parseFloat(weather?.temp) || -18.7,
-      unit: weather.unit || '°C',
-      status: (parseFloat(weather?.temp) < -25) ? 'WARNING' : 'NORMAL',
-      thresholds: { warning: '< -25.0 °C', critical: '< -35.0 °C' },
-      stats: { min: '-24.2 °C', avg: '-18.9 °C', max: '-12.1 °C' },
-      historicalData: [
-        { time: '00:00', val: -21.4 },
-        { time: '04:00', val: -22.8 },
-        { time: '08:00', val: -19.5 },
-        { time: '12:00', val: -17.2 },
-        { time: '16:00', val: -18.7 },
-        { time: '20:00', val: -20.1 },
-        { time: 'Now', val: typeof weather?.temp === 'number' ? weather.temp : -18.7 },
-      ],
-      interpretation: 'Meteorological telemetry indicates stable surface layer conditions with mild convective heat loss.',
-      recommendation: 'Check thermal trace circuits on fuel line transfer manifold.',
-    });
-  };
-
-  const handleWindClick = () => {
-    openDrillDown({
-      title: 'Surface Wind Speed & Gust Diagnostics',
-      category: 'ENVIRONMENT',
-      metricKey: 'wind_speed',
-      currentValue: parseFloat(weather?.windSpeed) || 28,
-      unit: 'km/h',
-      status: (parseFloat(weather?.windSpeed) > 60) ? 'WARNING' : 'NORMAL',
-      thresholds: { warning: '> 60 km/h', critical: '> 85 km/h' },
-      stats: { min: '8 km/h', avg: '26 km/h', max: '68 km/h' },
-      historicalData: [
-        { time: '00:00', val: 14.5 },
-        { time: '04:00', val: 18.2 },
-        { time: '08:00', val: 24.0 },
-        { time: '12:00', val: 32.5 },
-        { time: '16:00', val: 28.0 },
-        { time: '20:00', val: 22.4 },
-        { time: 'Now', val: parseFloat(weather?.windSpeed) || 28 },
-      ],
-      interpretation: 'Katabatic wind flow from polar plateau remains sub-critical. Structural anchoring on communication radomes stable.',
-      recommendation: 'Verify outer meteorological mast tension cables if sustained gusts exceed 50 km/h.',
-    });
-  };
-
-  const handleHumidityClick = () => {
-    openDrillDown({
-      title: 'Relative Humidity & Frost Point Analysis',
-      category: 'ENVIRONMENT',
-      metricKey: 'humidity',
-      currentValue: parseFloat(weather?.humidity) || 68,
-      unit: '%',
-      status: 'NORMAL',
-      thresholds: { warning: '> 85% (Heavy Rime Frost)', critical: '> 95%' },
-      stats: { min: '45%', avg: '64%', max: '78%' },
-      historicalData: [
-        { time: '00:00', val: 62 },
-        { time: '04:00', val: 65 },
-        { time: '08:00', val: 70 },
-        { time: '12:00', val: 66 },
-        { time: '16:00', val: 68 },
-        { time: '20:00', val: 67 },
-        { time: 'Now', val: parseFloat(weather?.humidity) || 68 },
-      ],
-      interpretation: 'Low sublimation rate prevents excessive icing across solar panel arrays and radome enclosures.',
-      recommendation: 'Keep active dehumidifiers cycling in food and electronics storage bay.',
-    });
-  };
-
-  const handlePressureClick = () => {
-    openDrillDown({
-      title: 'Barometric Atmospheric Pressure',
-      category: 'ENVIRONMENT',
-      metricKey: 'pressure',
-      currentValue: parseFloat(weather?.pressure) || 987,
-      unit: 'hPa',
-      status: (parseFloat(weather?.pressure) < 970) ? 'WARNING' : 'NORMAL',
-      thresholds: { warning: '< 970 hPa (Depression)', critical: '< 950 hPa (Polar Cyclone)' },
-      stats: { min: '974 hPa', avg: '986 hPa', max: '1002 hPa' },
-      historicalData: [
-        { time: '00:00', val: 992 },
-        { time: '04:00', val: 990 },
-        { time: '08:00', val: 988 },
-        { time: '12:00', val: 987 },
-        { time: '16:00', val: 986 },
-        { time: '20:00', val: 987 },
-        { time: 'Now', val: parseFloat(weather?.pressure) || 987 },
-      ],
-      interpretation: 'Barometer reading steady. Slight downward tendency indicates approaching low-pressure maritime trough in 36 hours.',
-      recommendation: 'Monitor synoptic charts for blizzard formation in the Southern Ocean sector.',
-    });
-  };
-
   return (
     <div className="weather-overview-section polaris-card">
       <div className="card-header-simple">
         <span className="card-title">WEATHER OVERVIEW</span>
-        <span className="card-subtitle-badge">INTERACTIVE</span>
       </div>
 
       {/* Main Big Weather Display */}
-      <div 
-        className="weather-main-hero clickable-drilldown-card"
-        onClick={handleHeroClick}
-        title="Click to view full temperature telemetry and trend diagnostics"
+      <ExpandableTelemetryCard
+        title="Ambient Polar Weather"
+        category="METEOROLOGICAL OBS"
+        value={`${weather.temp}${weather.unit}`}
+        status="nominal"
+        icon={CloudSnow}
+        color="#38bdf8"
+        subtext={`Current Condition: ${weather.condition}`}
+        details={[
+          { label: 'Surface Temperature', value: `${weather.temp}${weather.unit}`, color: '#38bdf8' },
+          { label: 'Weather Condition', value: weather.condition, color: '#f8fafc' },
+          { label: 'Wind Chill Factor', value: '-31.5°C', color: '#60a5fa' },
+          { label: 'Barometric Trend', value: `${weather.pressure} (Stable)`, color: '#10b981' },
+        ]}
+        interpretation="Overwintering polar atmospheric station reading from the sonic anemometer and automated weather station (AWS)."
+        recommendation="Outer expedition EVA permits valid with thermal protective gear Category 4."
+        stationName={selectedStation}
+        className="weather-main-hero-wrapper"
       >
-        <div className="weather-hero-left">
-          {/* Animated Snow Cloud Icon */}
-          <div className="weather-cloud-wrap">
-            <svg className="snow-cloud-svg" viewBox="0 0 54 44" fill="none">
-              <path 
-                d="M38 18C37.5 10 30 6 23 9C17 6 9 12 11 19C5 21 4 29 10 32C12 33 40 33 42 32C47 30 48 22 42 19C40 18.5 39 18 38 18Z" 
-                fill="#38bdf8" 
-                fillOpacity="0.2" 
-                stroke="#38bdf8" 
-                strokeWidth="1.8" 
-                strokeLinejoin="round" 
-              />
-              {/* Falling Snowflakes */}
-              <circle cx="16" cy="38" r="1.5" fill="#ffffff" className="flake-anim flake-1" />
-              <circle cx="27" cy="40" r="1.8" fill="#ffffff" className="flake-anim flake-2" />
-              <circle cx="37" cy="38" r="1.5" fill="#ffffff" className="flake-anim flake-3" />
-            </svg>
+        <div className="weather-main-hero">
+          <div className="weather-hero-left">
+            {/* Animated Snow Cloud Icon */}
+            <div className="weather-cloud-wrap">
+              <svg className="snow-cloud-svg" viewBox="0 0 54 44" fill="none">
+                <path 
+                  d="M38 18C37.5 10 30 6 23 9C17 6 9 12 11 19C5 21 4 29 10 32C12 33 40 33 42 32C47 30 48 22 42 19C40 18.5 39 18 38 18Z" 
+                  fill="#38bdf8" 
+                  fillOpacity="0.2" 
+                  stroke="#38bdf8" 
+                  strokeWidth="1.8" 
+                  strokeLinejoin="round" 
+                />
+                {/* Falling Snowflakes */}
+                <circle cx="16" cy="38" r="1.5" fill="#ffffff" className="flake-anim flake-1" />
+                <circle cx="27" cy="40" r="1.8" fill="#ffffff" className="flake-anim flake-2" />
+                <circle cx="37" cy="38" r="1.5" fill="#ffffff" className="flake-anim flake-3" />
+              </svg>
+            </div>
           </div>
-        </div>
 
-        <div className="weather-hero-right">
-          <div className="weather-temp-row">
-            <span className="temp-number mono-num">{weather.temp}</span>
-            <span className="temp-unit">{weather.unit}</span>
+          <div className="weather-hero-right">
+            <div className="weather-temp-row">
+              <span className="temp-number mono-num">{weather.temp}</span>
+              <span className="temp-unit">{weather.unit}</span>
+            </div>
+            <div className="weather-condition-label">{weather.condition}</div>
           </div>
-          <div className="weather-condition-label">{weather.condition}</div>
         </div>
-      </div>
+      </ExpandableTelemetryCard>
 
       {/* Weather Parameters Table */}
       <div className="weather-params-list">
-        <div 
-          className="weather-param-row clickable-drilldown-card"
-          onClick={handleWindClick}
-          title="Click to inspect wind dynamics"
+        {/* Param 1: Wind Speed */}
+        <ExpandableTelemetryCard
+          title="Surface Wind Velocity"
+          category="ANEMOMETRY"
+          value={weather.windSpeed}
+          status="nominal"
+          icon={Wind}
+          color="#0284c7"
+          details={[
+            { label: 'Sustained Wind', value: weather.windSpeed, color: '#0284c7' },
+            { label: '3-Second Gust', value: '42 km/h', color: '#f59e0b' },
+            { label: 'Beaufort Scale', value: 'Force 5 (Fresh Breeze)', color: '#38bdf8' },
+          ]}
+          interpretation="Wind velocity is sufficient for wind turbine generation while within safe structural aerodynamic tolerances."
+          stationName={selectedStation}
+          className="weather-param-row-wrapper"
         >
-          <div className="param-label-wrap">
-            <Wind size={13} className="param-icon" />
-            <span className="param-label">Wind Speed</span>
+          <div className="weather-param-row">
+            <div className="param-label-wrap">
+              <Wind size={13} className="param-icon" />
+              <span className="param-label">Wind Speed</span>
+            </div>
+            <span className="param-value mono-num">{weather.windSpeed}</span>
           </div>
-          <span className="param-value mono-num">{weather.windSpeed}</span>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="weather-param-row clickable-drilldown-card"
-          onClick={handleWindClick}
-          title="Click to inspect wind vectors"
+        {/* Param 2: Wind Direction */}
+        <ExpandableTelemetryCard
+          title="Wind Direction Vector"
+          category="METEOROLOGY"
+          value={weather.windDir}
+          status="nominal"
+          icon={Compass}
+          color="#38bdf8"
+          details={[
+            { label: 'Compass Cardinal', value: weather.windDir, color: '#38bdf8' },
+            { label: 'Azimuth Angle', value: '315° (North-West)', color: '#f8fafc' },
+            { label: 'Katabatic Vector', value: 'Inland Continental Flow', color: '#10b981' },
+          ]}
+          interpretation="North-westerly polar airflow channelled by the Schirmacher Oasis / Larsemann terrain ridge."
+          stationName={selectedStation}
+          className="weather-param-row-wrapper"
         >
-          <div className="param-label-wrap">
-            <Compass size={13} className="param-icon" />
-            <span className="param-label">Wind Direction</span>
+          <div className="weather-param-row">
+            <div className="param-label-wrap">
+              <Compass size={13} className="param-icon" />
+              <span className="param-label">Wind Direction</span>
+            </div>
+            <span className="param-value mono-num">{weather.windDir}</span>
           </div>
-          <span className="param-value mono-num">{weather.windDir}</span>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="weather-param-row clickable-drilldown-card"
-          onClick={handleHumidityClick}
-          title="Click to inspect humidity telemetry"
+        {/* Param 3: Relative Humidity */}
+        <ExpandableTelemetryCard
+          title="Atmospheric Relative Humidity"
+          category="HYGROMETRY"
+          value={weather.humidity}
+          status="nominal"
+          icon={Droplets}
+          color="#06b6d4"
+          details={[
+            { label: 'Relative Humidity', value: weather.humidity, color: '#06b6d4' },
+            { label: 'Dew Point', value: '-23.5°C', color: '#38bdf8' },
+            { label: 'Vapor Pressure', value: '0.84 hPa', color: '#94a3b8' },
+          ]}
+          interpretation="Dry Antarctic atmosphere prevents excessive ice accretion on radomes and solar collectors."
+          stationName={selectedStation}
+          className="weather-param-row-wrapper"
         >
-          <div className="param-label-wrap">
-            <Droplets size={13} className="param-icon" />
-            <span className="param-label">Humidity</span>
+          <div className="weather-param-row">
+            <div className="param-label-wrap">
+              <Droplets size={13} className="param-icon" />
+              <span className="param-label">Humidity</span>
+            </div>
+            <span className="param-value mono-num">{weather.humidity}</span>
           </div>
-          <span className="param-value mono-num">{weather.humidity}</span>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="weather-param-row clickable-drilldown-card"
-          onClick={handlePressureClick}
-          title="Click to inspect atmospheric pressure analysis"
+        {/* Param 4: Barometric Pressure */}
+        <ExpandableTelemetryCard
+          title="Station Barometric Pressure"
+          category="BAROMETRY"
+          value={weather.pressure}
+          status="nominal"
+          icon={Gauge}
+          color="#10b981"
+          details={[
+            { label: 'Station Pressure', value: weather.pressure, color: '#10b981' },
+            { label: 'Sea Level Adjusted (QNH)', value: '1004 hPa', color: '#38bdf8' },
+            { label: '3-Hour Tendency', value: '+0.4 hPa (Rising Slowly)', color: '#10b981' },
+          ]}
+          interpretation="Barometric pressure trend confirms steady anti-cyclonic polar ridge conditions without imminent storm formation."
+          stationName={selectedStation}
+          className="weather-param-row-wrapper"
         >
-          <div className="param-label-wrap">
-            <Gauge size={13} className="param-icon" />
-            <span className="param-label">Pressure</span>
+          <div className="weather-param-row">
+            <div className="param-label-wrap">
+              <Gauge size={13} className="param-icon" />
+              <span className="param-label">Pressure</span>
+            </div>
+            <span className="param-value mono-num">{weather.pressure}</span>
           </div>
-          <span className="param-value mono-num">{weather.pressure}</span>
-        </div>
+        </ExpandableTelemetryCard>
       </div>
 
       {/* Forecast Link */}

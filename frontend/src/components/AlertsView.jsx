@@ -19,13 +19,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTelemetry } from '../context/TelemetryContext';
+import { usePredictive } from '../context/PredictiveContext';
 import { STATIONS_DATA } from '../data/stationsData';
 import { triggerScenario, acknowledgeAlert } from '../services/api';
+import { Sparkles, ArrowRight, Activity, ChevronRight } from 'lucide-react';
 
 export default function AlertsView({ selectedStation }) {
   const { isIndiaOperator, assignedStation } = useAuth();
   const { alerts: liveAlerts, triggerAnomaly, refreshTelemetry } = useTelemetry();
+  const { predictiveData, openPredictionCenter, isSimulating } = usePredictive();
 
+  const [activeAlertTab, setActiveAlertTab] = useState('active'); // 'active' | 'predictive'
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [stationFilter, setStationFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,111 +176,243 @@ export default function AlertsView({ selectedStation }) {
         </div>
       </div>
 
-      {/* KPI Severity Strip */}
-      <div className="alerts-kpi-strip">
-        <div 
-          className={`alert-kpi-pill ${severityFilter === 'ALL' ? 'active-filter' : ''}`}
-          onClick={() => setSeverityFilter('ALL')}
+      {/* Alert Mode Switcher: Active Incidents vs. AI Predictive Early Warnings */}
+      <div className="alerts-subnav-switch">
+        <button
+          className={`alerts-tab-btn ${activeAlertTab === 'active' ? 'active' : ''}`}
+          onClick={() => setActiveAlertTab('active')}
         >
-          <span className="kpi-count">{masterAlerts.length}</span>
-          <span className="kpi-label">TOTAL INCIDENTS</span>
-        </div>
+          <Bell size={14} />
+          <span>Active SCADA Incident Log ({masterAlerts.length})</span>
+        </button>
 
-        <div 
-          className={`alert-kpi-pill pill-critical ${severityFilter === 'CRITICAL' ? 'active-filter' : ''}`}
-          onClick={() => setSeverityFilter('CRITICAL')}
+        <button
+          className={`alerts-tab-btn ai-tab-btn ${activeAlertTab === 'predictive' ? 'active' : ''}`}
+          onClick={() => setActiveAlertTab('predictive')}
         >
-          <span className="kpi-count text-critical">{criticalCount}</span>
-          <span className="kpi-label">CRITICAL (P1)</span>
-        </div>
-
-        <div 
-          className={`alert-kpi-pill pill-high ${severityFilter === 'HIGH' ? 'active-filter' : ''}`}
-          onClick={() => setSeverityFilter('HIGH')}
-        >
-          <span className="kpi-count text-high">{highCount}</span>
-          <span className="kpi-label">HIGH PRIORITY (P2)</span>
-        </div>
-
-        <div 
-          className={`alert-kpi-pill pill-warning ${severityFilter === 'WARNING' ? 'active-filter' : ''}`}
-          onClick={() => setSeverityFilter('WARNING')}
-        >
-          <span className="kpi-count text-warning">{warningCount}</span>
-          <span className="kpi-label">WARNING (P3)</span>
-        </div>
-
-        <div 
-          className={`alert-kpi-pill pill-info ${severityFilter === 'INFO' ? 'active-filter' : ''}`}
-          onClick={() => setSeverityFilter('INFO')}
-        >
-          <span className="kpi-count text-info">{infoCount}</span>
-          <span className="kpi-label">ROUTINE / INFO (P4)</span>
-        </div>
+          <Sparkles size={14} className="text-cyan" />
+          <span>AI Predicted Early Warnings ({predictiveData?.predictions?.length || 7})</span>
+          {isSimulating && <span className="ai-sim-badge">SIMULATED</span>}
+        </button>
       </div>
 
-      {/* Controls & Search Bar */}
-      <div className="alerts-filter-bar polaris-card">
-        <div className="filter-left-group">
-          {/* Station Selector (India Operator Only) */}
-          {isIndiaOperator && (
-            <div className="station-filter-pills">
-              <span className="filter-label">Station Scope:</span>
-              <button 
-                className={`st-filter-btn ${stationFilter === 'ALL' ? 'active' : ''}`}
-                onClick={() => setStationFilter('ALL')}
-              >
-                All Stations
-              </button>
-              <button 
-                className={`st-filter-btn ${stationFilter === 'station-maitri' ? 'active' : ''}`}
-                onClick={() => setStationFilter('station-maitri')}
-              >
-                Maitri
-              </button>
-              <button 
-                className={`st-filter-btn ${stationFilter === 'station-bharati' ? 'active' : ''}`}
-                onClick={() => setStationFilter('station-bharati')}
-              >
-                Bharati
-              </button>
+      {activeAlertTab === 'predictive' ? (
+        /* ====================================================================
+           AI PREDICTED EARLY WARNINGS VIEW (FORWARD-LOOKING)
+           ==================================================================== */
+        <div className="ai-predicted-alerts-view">
+          <div className="ai-pred-banner-info polaris-card">
+            <div className="ai-p-left">
+              <Sparkles size={18} className="text-cyan" />
+              <div>
+                <h4 className="ai-p-title">Physics-Informed Multi-Horizon Machine Learning Forecasts</h4>
+                <p className="ai-p-desc">
+                  Forward-looking anomaly extrapolation across thermal, electrical, mechanical, and meteorological sensor streams before physical threshold trips occur.
+                </p>
+              </div>
             </div>
-          )}
+            <button 
+              className="btn-open-ai-center"
+              onClick={() => openPredictionCenter(null, 'all')}
+            >
+              <Sparkles size={13} />
+              <span>Launch AI Prediction Center</span>
+            </button>
+          </div>
 
-          {/* Search Box */}
-          <div className="alerts-search-box">
-            <Search size={14} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search incidents by keyword or subsystem..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="alerts-search-input"
-            />
+          <div className="ai-predicted-cards-list">
+            {(predictiveData?.predictions || []).map((pred) => {
+              const isCrit = pred.risk_level === 'CRITICAL';
+              const isHigh = pred.risk_level === 'HIGH';
+              const isMod = pred.risk_level === 'MODERATE';
+              const riskTag = isCrit ? 'card-risk-crit' : isHigh ? 'card-risk-high' : isMod ? 'card-risk-mod' : 'card-risk-ok';
+
+              return (
+                <div 
+                  key={pred.id} 
+                  className={`incident-item-card polaris-card ai-pred-card ${riskTag}`}
+                  onClick={() => openPredictionCenter(pred, pred.category)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="incident-card-top">
+                    <div className="incident-badge-cluster">
+                      <span className={`severity-badge ${riskTag}`}>
+                        AI PREDICTION • {pred.risk_level} RISK
+                      </span>
+                      <span className="station-badge-pill">
+                        {pred.station_name?.toUpperCase()}
+                      </span>
+                      <span className="subsystem-badge-pill">
+                        {pred.category.toUpperCase()} DOMAIN
+                      </span>
+                    </div>
+
+                    <div className="incident-time-cluster">
+                      <Clock size={12} className="text-dim" />
+                      <span className="time-txt text-rose font-bold">
+                        Breach in: {pred.time_to_breach}
+                      </span>
+                      <span className="ai-conf-badge mono-num">
+                        {pred.confidence}% Conf.
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="incident-title">{pred.title}</h3>
+                  <p className="incident-details">{pred.explanation}</p>
+
+                  <div className="ai-pred-metric-strip">
+                    <div className="ai-p-metric">
+                      <span className="ai-pm-lbl">Current Sensor:</span>
+                      <span className="ai-pm-val mono-num">{pred.current_val}</span>
+                    </div>
+                    <div className="ai-p-metric">
+                      <span className="ai-pm-lbl">Projected Target:</span>
+                      <span className="ai-pm-val mono-num text-cyan font-bold">{pred.predicted_val}</span>
+                    </div>
+                    <div className="ai-p-metric">
+                      <span className="ai-pm-lbl">Trip Threshold:</span>
+                      <span className="ai-pm-val mono-num text-muted">{pred.threshold}</span>
+                    </div>
+                  </div>
+
+                  <div className="incident-action-box">
+                    <div className="action-txt-wrap">
+                      <span className="action-label text-cyan">PRESCRIPTIVE AI MITIGATION DIRECTIVE:</span>
+                      <span className="action-desc">{pred.recommendation}</span>
+                    </div>
+
+                    <div className="action-btn-cluster">
+                      <button 
+                        className="btn-inspect-model"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPredictionCenter(pred, pred.category);
+                        }}
+                      >
+                        <Sparkles size={12} />
+                        <span>Inspect Forecast Curve</span>
+                        <ChevronRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+      ) : (
+        /* ====================================================================
+           ACTIVE SCADA INCIDENTS LOG (HISTORICAL & REALTIME TRIPS)
+           ==================================================================== */
+        <>
+          {/* KPI Severity Strip */}
+          <div className="alerts-kpi-strip">
+            <div 
+              className={`alert-kpi-pill ${severityFilter === 'ALL' ? 'active-filter' : ''}`}
+              onClick={() => setSeverityFilter('ALL')}
+            >
+              <span className="kpi-count">{masterAlerts.length}</span>
+              <span className="kpi-label">TOTAL INCIDENTS</span>
+            </div>
 
-        {/* Quick Fault Injection Buttons */}
-        <div className="fault-injection-strip">
-          <span className="inj-title">Inject Simulated Fault:</span>
-          <button 
-            className="btn-fault-inject btn-fault-danger"
-            onClick={() => handleTriggerScenario('GENERATOR_OVERHEAT')}
-            disabled={injectingScenario !== null}
-          >
-            <Flame size={12} />
-            <span>Genset Overheat (95°C)</span>
-          </button>
-          <button 
-            className="btn-fault-inject"
-            onClick={() => handleTriggerScenario('BLIZZARD_ALERT')}
-            disabled={injectingScenario !== null}
-          >
-            <Snowflake size={12} />
-            <span>Severe Blizzard</span>
-          </button>
-        </div>
-      </div>
+            <div 
+              className={`alert-kpi-pill pill-critical ${severityFilter === 'CRITICAL' ? 'active-filter' : ''}`}
+              onClick={() => setSeverityFilter('CRITICAL')}
+            >
+              <span className="kpi-count text-critical">{criticalCount}</span>
+              <span className="kpi-label">CRITICAL (P1)</span>
+            </div>
+
+            <div 
+              className={`alert-kpi-pill pill-high ${severityFilter === 'HIGH' ? 'active-filter' : ''}`}
+              onClick={() => setSeverityFilter('HIGH')}
+            >
+              <span className="kpi-count text-high">{highCount}</span>
+              <span className="kpi-label">HIGH PRIORITY (P2)</span>
+            </div>
+
+            <div 
+              className={`alert-kpi-pill pill-warning ${severityFilter === 'WARNING' ? 'active-filter' : ''}`}
+              onClick={() => setSeverityFilter('WARNING')}
+            >
+              <span className="kpi-count text-warning">{warningCount}</span>
+              <span className="kpi-label">WARNING (P3)</span>
+            </div>
+
+            <div 
+              className={`alert-kpi-pill pill-info ${severityFilter === 'INFO' ? 'active-filter' : ''}`}
+              onClick={() => setSeverityFilter('INFO')}
+            >
+              <span className="kpi-count text-info">{infoCount}</span>
+              <span className="kpi-label">ROUTINE / INFO (P4)</span>
+            </div>
+          </div>
+
+          {/* Controls & Search Bar */}
+          <div className="alerts-filter-bar polaris-card">
+            <div className="filter-left-group">
+              {/* Station Selector (India Operator Only) */}
+              {isIndiaOperator && (
+                <div className="station-filter-pills">
+                  <span className="filter-label">Station Scope:</span>
+                  <button 
+                    className={`st-filter-btn ${stationFilter === 'ALL' ? 'active' : ''}`}
+                    onClick={() => setStationFilter('ALL')}
+                  >
+                    All Stations
+                  </button>
+                  <button 
+                    className={`st-filter-btn ${stationFilter === 'station-maitri' ? 'active' : ''}`}
+                    onClick={() => setStationFilter('station-maitri')}
+                  >
+                    Maitri
+                  </button>
+                  <button 
+                    className={`st-filter-btn ${stationFilter === 'station-bharati' ? 'active' : ''}`}
+                    onClick={() => setStationFilter('station-bharati')}
+                  >
+                    Bharati
+                  </button>
+                </div>
+              )}
+
+              {/* Search Box */}
+              <div className="alerts-search-box">
+                <Search size={14} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search incidents by keyword or subsystem..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="alerts-search-input"
+                />
+              </div>
+            </div>
+
+            {/* Quick Fault Injection Buttons */}
+            <div className="fault-injection-strip">
+              <span className="inj-title">Inject Simulated Fault:</span>
+              <button 
+                className="btn-fault-inject btn-fault-danger"
+                onClick={() => handleTriggerScenario('GENERATOR_OVERHEAT')}
+                disabled={injectingScenario !== null}
+              >
+                <Flame size={12} />
+                <span>Genset Overheat (95°C)</span>
+              </button>
+              <button 
+                className="btn-fault-inject"
+                onClick={() => handleTriggerScenario('BLIZZARD_ALERT')}
+                disabled={injectingScenario !== null}
+              >
+                <Snowflake size={12} />
+                <span>Severe Blizzard</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Incidents List Cards */}
       <div className="incidents-cards-list">

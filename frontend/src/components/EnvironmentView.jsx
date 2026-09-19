@@ -19,10 +19,10 @@ import {
   Maximize2
 } from 'lucide-react';
 import { STATIONS_DATA } from '../data/stationsData';
-import { useModal } from '../context/ModalContext';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
+import AIPredictionIndicator from './AIPredictionIndicator';
 
 export default function EnvironmentView({ selectedStation }) {
-  const { openDrillDown } = useModal();
   const stationId = selectedStation === 'all-stations' ? 'station-maitri' : selectedStation;
   const station = STATIONS_DATA[stationId] || STATIONS_DATA['station-maitri'];
   const isMaitri = station.id === 'station-maitri';
@@ -102,168 +102,140 @@ export default function EnvironmentView({ selectedStation }) {
         </div>
       </div>
 
+      {/* AI Predictive Intelligence Section Indicator */}
+      <AIPredictionIndicator category="environment" />
+
       {/* Primary KPI Ribbon */}
       <div className="env-kpi-ribbon">
-        <div 
-          className="env-kpi-card clickable-drilldown-card"
-          onClick={() => openDrillDown({
-            title: 'Ambient Surface Temperature',
-            station: station.name,
-            category: 'ENVIRONMENT',
-            metricKey: 'temperature',
-            currentValue: isMaitri ? -18.7 : -14.2,
-            unit: '°C',
-            status: 'NORMAL',
-            thresholds: { warning: '< -25.0 °C', critical: '< -35.0 °C' },
-            stats: { min: isMaitri ? '-24.2 °C' : '-19.8 °C', avg: isMaitri ? '-18.9 °C' : '-14.8 °C', max: isMaitri ? '-12.1 °C' : '-8.4 °C' },
-            historicalData: hourlyData.map(h => ({ time: h.time, val: h.temp })),
-            interpretation: `Micro-meteorological sensors on ${station.name} indicate stable thermal conditions consistent with seasonal Antarctic models.`,
-            recommendation: 'Exterior corridor heating and trace circuits nominal.',
-          })}
-          title="Click to view comprehensive temperature waveform & statistics"
+        <ExpandableTelemetryCard
+          title="Surface Temperature"
+          subtitle={`${station.name} Mast Ambient Sensor`}
+          category="Environment Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Ambient Temp': `${weather.temp || '-18.7'}°C`,
+            'Wind Chill': isMaitri ? '-28.4°C' : '-24.8°C',
+            'Dew Point': isMaitri ? '-24.2°C' : '-19.6°C',
+            'Sensor Location': isMaitri ? 'Met Mast 10m' : 'Coastal Tower 12m',
+            'Thermal Drift': '-0.3°C/hr',
+            'Condition': weather.condition || 'Polar Clear'
+          }}
         >
-          <div className="kpi-label-row">
-            <Thermometer size={16} className="text-cyan" />
-            <span className="kpi-lbl">SURFACE TEMP</span>
+          <div className="env-kpi-card">
+            <div className="kpi-label-row">
+              <Thermometer size={16} className="text-cyan" />
+              <span className="kpi-lbl">SURFACE TEMP</span>
+            </div>
+            <div className="kpi-big-val mono-num">{weather.temp || '-18.7'}°C</div>
+            <div className="kpi-sub-txt">
+              RealFeel Wind Chill: <span className="text-cyan font-bold">{isMaitri ? '-28.4°C' : '-24.8°C'}</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">{weather.temp || '-18.7'}°C</div>
-          <div className="kpi-sub-txt">
-            RealFeel Wind Chill: <span className="text-cyan font-bold">{isMaitri ? '-28.4°C' : '-24.8°C'}</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="env-kpi-card clickable-drilldown-card"
-          onClick={() => openDrillDown({
-            title: 'Katabatic Surface Wind Velocity',
-            station: station.name,
-            category: 'ENVIRONMENT',
-            metricKey: 'wind_speed',
-            currentValue: isMaitri ? 28 : 44,
-            unit: 'km/h',
-            status: 'NORMAL',
-            thresholds: { warning: '> 60 km/h', critical: '> 85 km/h' },
-            stats: { min: '12 km/h', avg: isMaitri ? '28 km/h' : '42 km/h', max: isMaitri ? '68 km/h' : '82 km/h' },
-            historicalData: hourlyData.map(h => ({ time: h.time, val: h.wind })),
-            interpretation: 'Polar katabatic winds descending from continental ice sheets remain below high-danger storm thresholds.',
-            recommendation: 'Anchor outdoor instrumentation arrays if wind exceeds 50 km/h.',
-          })}
-          title="Click to view wind velocity dynamics"
+        <ExpandableTelemetryCard
+          title="Wind Velocity & Katabatic Vector"
+          subtitle="Sonic Anemometer & Vane Transducer"
+          category="Environment Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Wind Speed': weather.windSpeed || '28 km/h',
+            'Direction': `${weather.windDir || 'NW'} (${isMaitri ? '315°' : '290°'})`,
+            'Peak Gusts': isMaitri ? '42 km/h' : '62 km/h',
+            'Turbulence KE': '2.4 m²/s²',
+            'Katabatic Flow': 'Active Inland Downslope',
+            'Blizzard Trigger': 'Threshold > 55 km/h'
+          }}
         >
-          <div className="kpi-label-row">
-            <Wind size={16} className="text-amber" />
-            <span className="kpi-lbl">WIND VELOCITY</span>
+          <div className="env-kpi-card">
+            <div className="kpi-label-row">
+              <Wind size={16} className="text-amber" />
+              <span className="kpi-lbl">WIND VELOCITY</span>
+            </div>
+            <div className="kpi-big-val mono-num">{weather.windSpeed || '28 km/h'}</div>
+            <div className="kpi-sub-txt">
+              Direction: <span className="text-amber font-bold">{weather.windDir || 'NW'}</span> | Gusts: {isMaitri ? '42 km/h' : '62 km/h'}
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">{weather.windSpeed || '28 km/h'}</div>
-          <div className="kpi-sub-txt">
-            Direction: <span className="text-amber font-bold">{weather.windDir || 'NW'}</span> | Gusts: {isMaitri ? '42 km/h' : '62 km/h'}
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="env-kpi-card clickable-drilldown-card"
-          onClick={() => openDrillDown({
-            title: 'Cryospheric Snow Accumulation Rate',
-            station: station.name,
-            category: 'ENVIRONMENT',
-            metricKey: 'snow_accumulation',
-            currentValue: isMaitri ? 12.4 : 24.2,
-            unit: 'cm',
-            status: 'NORMAL',
-            thresholds: { warning: '> 30 cm / 24h', critical: '> 60 cm' },
-            stats: { min: '3 cm', avg: isMaitri ? '12.4 cm' : '22.1 cm', max: '34 cm' },
-            historicalData: [
-              { time: '00:00', val: 8.5 },
-              { time: '04:00', val: 9.4 },
-              { time: '08:00', val: 10.6 },
-              { time: '12:00', val: 11.8 },
-              { time: '16:00', val: 12.2 },
-              { time: 'Now', val: isMaitri ? 12.4 : 24.2 },
-            ],
-            interpretation: 'Ultrasonic depth sensors confirm stable drift levels around the aerodynamic stilt foundations.',
-            recommendation: 'Air intake plenum auto-blower cycle scheduled for 06:00 UTC.',
-          })}
-          title="Click to inspect snow accumulation data"
+        <ExpandableTelemetryCard
+          title="Snow Accumulation & Drift Rate"
+          subtitle="Ultrasonic Snow Depth Gauge"
+          category="Environment Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Snow Depth': weather.snowAccumulation || (isMaitri ? '12.4 cm' : '24.2 cm'),
+            '24h Drift Rate': isMaitri ? '0.85 cm/hr' : '1.75 cm/hr',
+            'Snow Density': '340 kg/m³',
+            'Firn Hardness': 'R5 Hard Packed',
+            'Drift Hazard': 'Moderate Sastrugi Formation',
+            'Station Clearance': 'Scheduled for 06:00 UTC'
+          }}
         >
-          <div className="kpi-label-row">
-            <CloudSnow size={16} className="text-blue" />
-            <span className="kpi-lbl">SNOW ACCUMULATION</span>
+          <div className="env-kpi-card">
+            <div className="kpi-label-row">
+              <CloudSnow size={16} className="text-blue" />
+              <span className="kpi-lbl">SNOW ACCUMULATION</span>
+            </div>
+            <div className="kpi-big-val mono-num">{weather.snowAccumulation || (isMaitri ? '12.4 cm' : '24.2 cm')}</div>
+            <div className="kpi-sub-txt">
+              24h Drift Rate: <span className="text-blue font-bold">{isMaitri ? '0.85 cm/hr' : '1.75 cm/hr'}</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">{weather.snowAccumulation || (isMaitri ? '12.4 cm' : '24.2 cm')}</div>
-          <div className="kpi-sub-txt">
-            24h Drift Rate: <span className="text-blue font-bold">{isMaitri ? '0.85 cm/hr' : '1.75 cm/hr'}</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="env-kpi-card clickable-drilldown-card"
-          onClick={() => openDrillDown({
-            title: 'Optical Runway & Station Visibility',
-            station: station.name,
-            category: 'ENVIRONMENT',
-            metricKey: 'visibility',
-            currentValue: parseFloat(weather.visibility) || 4.8,
-            unit: 'km',
-            status: 'NORMAL',
-            thresholds: { warning: '< 1.5 km', critical: '< 0.3 km' },
-            stats: { min: '1.2 km', avg: '5.2 km', max: '15.0 km' },
-            historicalData: [
-              { time: '00:00', val: 6.2 },
-              { time: '04:00', val: 5.5 },
-              { time: '08:00', val: 4.8 },
-              { time: '12:00', val: 5.0 },
-              { time: '16:00', val: 4.8 },
-              { time: 'Now', val: 4.8 },
-            ],
-            interpretation: 'Laser transmissometer indicates clear visual horizon with minimal blowing surface drift.',
-            recommendation: 'Maintain runway guidance strobes on standby.',
-          })}
-          title="Click to inspect optical range telemetry"
+        <ExpandableTelemetryCard
+          title="Atmospheric Optical Visibility"
+          subtitle="Forward Scatter Transmissometer"
+          category="Environment Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Visibility Distance': weather.visibility || '4.8 km',
+            'Condition': weather.condition || 'Polar Clear',
+            'Optical Extinction': '0.042 /km',
+            'Horizontal RVR': '4,800 m',
+            'Whiteout Risk': 'Low (< 15%)',
+            'Helo Landing Status': 'OPEN (VFR Conditions)'
+          }}
         >
-          <div className="kpi-label-row">
-            <Eye size={16} className="text-emerald" />
-            <span className="kpi-lbl">VISIBILITY</span>
+          <div className="env-kpi-card">
+            <div className="kpi-label-row">
+              <Eye size={16} className="text-emerald" />
+              <span className="kpi-lbl">VISIBILITY</span>
+            </div>
+            <div className="kpi-big-val mono-num">{weather.visibility || '4.8 km'}</div>
+            <div className="kpi-sub-txt">
+              Condition: <span className="text-emerald font-bold">{weather.condition || 'Polar Clear'}</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">{weather.visibility || '4.8 km'}</div>
-          <div className="kpi-sub-txt">
-            Condition: <span className="text-emerald font-bold">{weather.condition || 'Polar Clear'}</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div 
-          className="env-kpi-card clickable-drilldown-card"
-          onClick={() => openDrillDown({
-            title: 'Geomagnetic Planetary Kp-Index',
-            station: station.name,
-            category: 'RESEARCH',
-            metricKey: 'geomagnetic_kp',
-            currentValue: isMaitri ? 2.3 : 2.8,
-            unit: 'Kp',
-            status: 'NORMAL',
-            thresholds: { warning: '> 5.0 Kp (G2 Storm)', critical: '> 7.0 Kp (G4 Storm)' },
-            stats: { min: '1.0 Kp', avg: '2.4 Kp', max: '4.2 Kp' },
-            historicalData: [
-              { time: '00:00', val: 1.8 },
-              { time: '04:00', val: 2.1 },
-              { time: '08:00', val: 2.6 },
-              { time: '12:00', val: 2.9 },
-              { time: '16:00', val: 2.4 },
-              { time: 'Now', val: isMaitri ? 2.3 : 2.8 },
-            ],
-            interpretation: 'Triaxial fluxgate magnetometer reports minor magnetospheric substorm activity. Auroral oval overhead active.',
-            recommendation: 'Ionospheric sounder operations nominal. HF comms unaffected.',
-          })}
-          title="Click to inspect space weather and geomagnetic telemetry"
+        <ExpandableTelemetryCard
+          title="Geomagnetic Planetary Kp Index"
+          subtitle="Polar Fluxgate Magnetometer Array"
+          category="Space Weather Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Kp Index': `Kp ${isMaitri ? '2.3' : '2.8'}`,
+            'Space Weather': 'G1 Minor Storm / Auroral Oval',
+            'Aurora Intensity': '45 kR (Green 557.7 nm)',
+            'Solar Wind Speed': '442.8 km/s',
+            'IMF Bz': '-2.4 nT (Southward)',
+            'HF Radio Absorption': '0.2 dB (Minimal Loss)'
+          }}
         >
-          <div className="kpi-label-row">
-            <Activity size={16} className="text-purple" />
-            <span className="kpi-lbl">GEOMAGNETIC KP</span>
+          <div className="env-kpi-card">
+            <div className="kpi-label-row">
+              <Activity size={16} className="text-purple" />
+              <span className="kpi-lbl">GEOMAGNETIC KP</span>
+            </div>
+            <div className="kpi-big-val mono-num">Kp {isMaitri ? '2.3' : '2.8'}</div>
+            <div className="kpi-sub-txt">
+              Space Weather: <span className="text-purple font-bold">G1 Minor Storm / Aurora</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">Kp {isMaitri ? '2.3' : '2.8'}</div>
-          <div className="kpi-sub-txt">
-            Space Weather: <span className="text-purple font-bold">G1 Minor Storm / Aurora</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
       </div>
 
       {/* Main Meteorological Grid */}
@@ -271,24 +243,7 @@ export default function EnvironmentView({ selectedStation }) {
         {/* Left Column: 24h Trend Chart & Space Weather Console */}
         <div className="env-charts-col">
           {/* 24h Temperature & Wind Profile (Native SVG) */}
-          <div 
-            className="env-chart-card polaris-card clickable-drilldown-card"
-            onClick={() => openDrillDown({
-              title: '24-Hour Polar Thermal & Katabatic Wind Profile (Expanded)',
-              station: station.name,
-              category: 'ENVIRONMENT',
-              metricKey: 'temperature',
-              currentValue: isMaitri ? -18.7 : -14.2,
-              unit: '°C',
-              status: 'NORMAL',
-              thresholds: { warning: '< -25.0 °C', critical: '< -35.0 °C' },
-              stats: { min: isMaitri ? '-20.2 °C' : '-15.8 °C', avg: isMaitri ? '-18.9 °C' : '-14.6 °C', max: isMaitri ? '-17.8 °C' : '-13.5 °C' },
-              historicalData: hourlyData.map(h => ({ time: h.time, val: h.temp })),
-              interpretation: 'Continuous 24-hour meteorological logging from station mast transducers showing regular diurnal solar oscillation.',
-              recommendation: 'Baseline thermal profiles match historical Antarctic climate records.',
-            })}
-            title="Click to expand high-resolution thermal waveform"
-          >
+          <div className="env-chart-card polaris-card">
             <div className="panel-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Thermometer size={16} className="text-cyan" />
@@ -296,11 +251,10 @@ export default function EnvironmentView({ selectedStation }) {
               </div>
               <div className="stream-channel-legend" style={{ fontSize: '0.72rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                 <span style={{ color: '#38bdf8' }}>● Temperature (°C)</span>
-                <Maximize2 size={13} className="text-cyan" />
               </div>
             </div>
             <p className="section-subtitle">
-              Micro-meteorological telemetry recorded by station mast weather transducers. (Click to expand)
+              Micro-meteorological telemetry recorded by station mast weather transducers.
             </p>
 
             <div className="chart-container" style={{ height: 200, padding: '0.5rem 0' }}>
@@ -359,114 +313,81 @@ export default function EnvironmentView({ selectedStation }) {
               <h3 className="section-title">Upper Atmosphere & Space Weather Telemetry</h3>
             </div>
             <div className="space-weather-grid">
-              <div 
-                className="sw-item clickable-drilldown-card"
-                onClick={() => openDrillDown({
-                  title: 'Solar Wind Plasma Velocity (ACE / DSCOVR)',
-                  station: station.name,
-                  category: 'RESEARCH',
-                  metricKey: 'solar_wind',
-                  currentValue: 442.8,
-                  unit: 'km/s',
-                  status: 'NORMAL',
-                  thresholds: { warning: '> 600 km/s (High Speed Stream)', critical: '> 800 km/s (CME Impact)' },
-                  stats: { min: '380 km/s', avg: '435 km/s', max: '510 km/s' },
-                  historicalData: [
-                    { time: '00:00', val: 410 },
-                    { time: '04:00', val: 425 },
-                    { time: '08:00', val: 450 },
-                    { time: '12:00', val: 448 },
-                    { time: '16:00', val: 442.8 },
-                  ],
-                  interpretation: 'Interplanetary solar wind plasma flux is nominal. No Earth-directed coronal mass ejection detected.',
-                  recommendation: 'GPS L-band positioning accuracy remains unperturbed.',
-                })}
+              <ExpandableTelemetryCard
+                title="Solar Wind Speed & Density"
+                subtitle="ACE & DSCOVR Real-Time Space Weather"
+                category="Space Weather Telemetry"
+                status="ONLINE"
+                metrics={{
+                  'Solar Wind Velocity': '442.8 km/s',
+                  'Proton Density': '6.4 p/cm³',
+                  'Dynamic Pressure': '2.1 nPa',
+                  'Status': 'Nominal Velocity (Sub-Alfvénic)'
+                }}
               >
-                <span className="sw-label">Solar Wind Speed</span>
-                <span className="sw-val mono-num">442.8 km/s</span>
-                <span className="sw-status text-emerald">Nominal Velocity</span>
-              </div>
-              <div 
-                className="sw-item clickable-drilldown-card"
-                onClick={() => openDrillDown({
-                  title: 'Interplanetary Magnetic Field (IMF Bz)',
-                  station: station.name,
-                  category: 'RESEARCH',
-                  metricKey: 'imf_bz',
-                  currentValue: -2.4,
-                  unit: 'nT',
-                  status: 'WARNING',
-                  thresholds: { warning: '< -5.0 nT (Reconnection)', critical: '< -10.0 nT (Major Storm)' },
-                  stats: { min: '-6.2 nT', avg: '-1.8 nT', max: '+4.1 nT' },
-                  historicalData: [
-                    { time: '00:00', val: 1.2 },
-                    { time: '04:00', val: -0.5 },
-                    { time: '08:00', val: -1.8 },
-                    { time: '12:00', val: -3.1 },
-                    { time: '16:00', val: -2.4 },
-                  ],
-                  interpretation: 'Southward IMF orientation facilitates magnetic reconnection with Earth’s dayside magnetopause, triggering visual aurora.',
-                  recommendation: 'All-sky auroral imager active in automated capture mode.',
-                })}
+                <div className="sw-item">
+                  <span className="sw-label">Solar Wind Speed</span>
+                  <span className="sw-val mono-num">442.8 km/s</span>
+                  <span className="sw-status text-emerald">Nominal Velocity</span>
+                </div>
+              </ExpandableTelemetryCard>
+
+              <ExpandableTelemetryCard
+                title="Interplanetary Magnetic Field (IMF)"
+                subtitle="Triaxial Magnetometer Sensor"
+                category="Space Weather Telemetry"
+                status="ONLINE"
+                metrics={{
+                  'IMF Bz (North-South)': '-2.4 nT (Southward)',
+                  'IMF By (East-West)': '+1.8 nT',
+                  'Total Field (Bt)': '4.2 nT',
+                  'Substorm Potential': 'Elevated Auroral Precipitation'
+                }}
               >
-                <span className="sw-label">Interplanetary Mag Field (IMF Bz)</span>
-                <span className="sw-val mono-num">-2.4 nT (Southward)</span>
-                <span className="sw-status text-amber">Minor Auroral Injection</span>
-              </div>
-              <div 
-                className="sw-item clickable-drilldown-card"
-                onClick={() => openDrillDown({
-                  title: 'Ionospheric Scintillation Index (S4)',
-                  station: station.name,
-                  category: 'COMMUNICATION',
-                  metricKey: 's4_index',
-                  currentValue: 0.165,
-                  unit: 'S4',
-                  status: 'NORMAL',
-                  thresholds: { warning: '> 0.40 (Phase Drift)', critical: '> 0.70 (Satcom Outage)' },
-                  stats: { min: '0.08', avg: '0.14', max: '0.28' },
-                  historicalData: [
-                    { time: '00:00', val: 0.12 },
-                    { time: '04:00', val: 0.15 },
-                    { time: '08:00', val: 0.18 },
-                    { time: '12:00', val: 0.16 },
-                    { time: '16:00', val: 0.165 },
-                  ],
-                  interpretation: 'Low ionospheric amplitude fluctuations ensure crystal-clear GSAT / Inmarsat satellite downlink signals.',
-                  recommendation: 'High-bandwidth research data sync permitted.',
-                })}
+                <div className="sw-item">
+                  <span className="sw-label">Interplanetary Mag Field (IMF Bz)</span>
+                  <span className="sw-val mono-num">-2.4 nT (Southward)</span>
+                  <span className="sw-status text-amber">Minor Auroral Injection</span>
+                </div>
+              </ExpandableTelemetryCard>
+
+              <ExpandableTelemetryCard
+                title="Ionospheric Scintillation (S4 Index)"
+                subtitle="Dual-Frequency GNSS Receiver"
+                category="Space Weather Telemetry"
+                status="ONLINE"
+                metrics={{
+                  'S4 Scintillation Index': '0.165',
+                  'Total Electron Content (TEC)': '14.2 TECU',
+                  'Satcom UHF Loss': '0.0 dB (Negligible)',
+                  'Status': 'Satcom UHF & GPS Safe'
+                }}
               >
-                <span className="sw-label">Ionospheric Scintillation (S4)</span>
-                <span className="sw-val mono-num">0.165</span>
-                <span className="sw-status text-emerald">Satcom UHF Safe</span>
-              </div>
-              <div 
-                className="sw-item clickable-drilldown-card"
-                onClick={() => openDrillDown({
-                  title: 'Total Atmospheric Ozone Column (Dobson Array)',
-                  station: station.name,
-                  category: 'RESEARCH',
-                  metricKey: 'ozone_column',
-                  currentValue: 285,
-                  unit: 'DU',
-                  status: 'NORMAL',
-                  thresholds: { warning: '< 220 DU (Ozone Hole)', critical: '< 150 DU' },
-                  stats: { min: '260 DU', avg: '282 DU', max: '315 DU' },
-                  historicalData: [
-                    { time: '00:00', val: 278 },
-                    { time: '04:00', val: 280 },
-                    { time: '08:00', val: 285 },
-                    { time: '12:00', val: 288 },
-                    { time: '16:00', val: 285 },
-                  ],
-                  interpretation: 'Dobson Spectrophotometer readings demonstrate strong stratospheric ozone recovery during current polar cycle.',
-                  recommendation: 'Standard UV-B outdoor protection protocol active.',
-                })}
+                <div className="sw-item">
+                  <span className="sw-label">Ionospheric Scintillation (S4)</span>
+                  <span className="sw-val mono-num">0.165</span>
+                  <span className="sw-status text-emerald">Satcom UHF Safe</span>
+                </div>
+              </ExpandableTelemetryCard>
+
+              <ExpandableTelemetryCard
+                title="Stratospheric Total Ozone Column"
+                subtitle="Brewer / Dobson Spectrophotometer"
+                category="Atmospheric Chemistry"
+                status="ONLINE"
+                metrics={{
+                  'Ozone Column': '285 Dobson Units (DU)',
+                  'Vortex Baseline': '220 DU Threshold',
+                  'UV Index': '1.8 (Low)',
+                  'Status': 'Polar Vortex Stable / Nominal'
+                }}
               >
-                <span className="sw-label">Total Ozone Column</span>
-                <span className="sw-val mono-num">285 Dobson Units</span>
-                <span className="sw-status text-cyan">Spring Ozone Layer Nominal</span>
-              </div>
+                <div className="sw-item">
+                  <span className="sw-label">Total Ozone Column</span>
+                  <span className="sw-val mono-num">285 Dobson Units</span>
+                  <span className="sw-status text-cyan">Spring Ozone Layer Nominal</span>
+                </div>
+              </ExpandableTelemetryCard>
             </div>
           </div>
 
@@ -478,33 +399,26 @@ export default function EnvironmentView({ selectedStation }) {
             </div>
             <div className="permafrost-table">
               {permafrostSensors.map((p, idx) => (
-                <div 
-                  key={idx} 
-                  className="permafrost-row clickable-drilldown-card"
-                  onClick={() => openDrillDown({
-                    title: `Permafrost Thermistor: ${p.depth}`,
-                    station: station.name,
-                    category: 'ENVIRONMENT',
-                    metricKey: 'permafrost_temp',
-                    currentValue: p.temp,
-                    unit: '°C',
-                    status: 'NORMAL',
-                    thresholds: { warning: '> -2.0 °C (Active Layer Thaw)', critical: '> 0.0 °C' },
-                    stats: { min: `${p.temp - 2.5}°C`, avg: `${p.temp}°C`, max: `${p.temp + 1.8}°C` },
-                    historicalData: [
-                      { time: '00:00', val: +(p.temp - 0.4).toFixed(1) },
-                      { time: '06:00', val: +(p.temp - 0.2).toFixed(1) },
-                      { time: '12:00', val: +(p.temp + 0.1).toFixed(1) },
-                      { time: '18:00', val: +(p.temp).toFixed(1) },
-                    ],
-                    interpretation: `Subsurface cryo-sensor at ${p.depth} indicates rock/firn core is fully frozen and structurally anchoring station foundations.`,
-                    recommendation: 'No thermal degradation of foundation pilings detected.',
-                  })}
+                <ExpandableTelemetryCard
+                  key={idx}
+                  title={`Cryospheric Borehole: ${p.depth}`}
+                  subtitle={`${station.name} Deep Ground Thermistor String`}
+                  category="Geophysical Cryosphere"
+                  status={p.status}
+                  metrics={{
+                    'Borehole Depth': p.depth,
+                    'Subsurface Temperature': `${p.temp}°C`,
+                    'Active Layer State': p.status,
+                    'Thermal Stability': '±0.04°C annual drift',
+                    'Bedrock Coupling': 'Continuous Core Contact'
+                  }}
                 >
-                  <span className="pf-depth">{p.depth}</span>
-                  <span className="pf-temp mono-num">{p.temp}°C</span>
-                  <span className="pf-status-pill">{p.status}</span>
-                </div>
+                  <div className="permafrost-row">
+                    <span className="pf-depth">{p.depth}</span>
+                    <span className="pf-temp mono-num">{p.temp}°C</span>
+                    <span className="pf-status-pill">{p.status}</span>
+                  </div>
+                </ExpandableTelemetryCard>
               ))}
             </div>
           </div>
@@ -520,24 +434,41 @@ export default function EnvironmentView({ selectedStation }) {
             </div>
             <div className="forecast-list">
               {forecast7Day.map((fc, i) => (
-                <div key={i} className={`forecast-item-row ${i === 1 ? 'forecast-item-warning' : ''}`}>
-                  <div className="fc-day-col">
-                    <span className="fc-day-name">{fc.day}</span>
-                    <span className="fc-cond-name">{fc.cond}</span>
+                <ExpandableTelemetryCard
+                  key={i}
+                  title={`Polar Forecast: ${fc.day}`}
+                  subtitle={`${fc.cond} • ${station.name}`}
+                  category="Meteorological Forecast"
+                  status={fc.cond.includes('Blizzard') || fc.cond.includes('Gale') ? 'WARNING' : 'NOMINAL'}
+                  metrics={{
+                    'Forecast Period': fc.day,
+                    'Atmospheric Condition': fc.cond,
+                    'Expected Snowfall': fc.snow,
+                    'Wind Velocity': fc.wind,
+                    'Max Temp': `${fc.high}°C`,
+                    'Min Temp': `${fc.low}°C`,
+                    'Confidence Score': '94% (ECMWF + GFS Ensemble)'
+                  }}
+                >
+                  <div className={`forecast-item-row ${i === 1 ? 'forecast-item-warning' : ''}`}>
+                    <div className="fc-day-col">
+                      <span className="fc-day-name">{fc.day}</span>
+                      <span className="fc-cond-name">{fc.cond}</span>
+                    </div>
+                    <div className="fc-snow-col">
+                      <CloudSnow size={12} className="text-cyan" />
+                      <span>{fc.snow}</span>
+                    </div>
+                    <div className="fc-wind-col">
+                      <Wind size={12} className="text-amber" />
+                      <span>{fc.wind}</span>
+                    </div>
+                    <div className="fc-temp-col mono-num">
+                      <span className="fc-high">{fc.high}°</span>
+                      <span className="fc-low">{fc.low}°</span>
+                    </div>
                   </div>
-                  <div className="fc-snow-col">
-                    <CloudSnow size={12} className="text-cyan" />
-                    <span>{fc.snow}</span>
-                  </div>
-                  <div className="fc-wind-col">
-                    <Wind size={12} className="text-amber" />
-                    <span>{fc.wind}</span>
-                  </div>
-                  <div className="fc-temp-col mono-num">
-                    <span className="fc-high">{fc.high}°</span>
-                    <span className="fc-low">{fc.low}°</span>
-                  </div>
-                </div>
+                </ExpandableTelemetryCard>
               ))}
             </div>
           </div>

@@ -30,6 +30,8 @@ STATIONS = {
         "name": "Maitri Research Station",
         "location": "Schirmacher Oasis, Queen Maud Land",
         "coordinates": (-70.765833, 11.735833),
+        "timezone": "UTC",
+        "timezone_label": "UTC+0",
         "baseline": {
             "temperature": -18.7,       # °C
             "battery_level": 74.0,      # %
@@ -45,6 +47,8 @@ STATIONS = {
         "name": "Bharati Research Station",
         "location": "Larsemann Hills",
         "coordinates": (-69.407778, 76.187222),
+        "timezone": "Antarctica/Mawson",
+        "timezone_label": "UTC+5",
         "baseline": {
             "temperature": -14.2,       # °C
             "battery_level": 91.0,      # %

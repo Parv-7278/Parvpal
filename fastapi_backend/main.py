@@ -1,12 +1,18 @@
+import os
+import sys
 import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from config import settings
+
 from services.supabase_client import get_supabase_client, is_supabase_configured
 from routers import (
     stations_router, 
@@ -15,7 +21,10 @@ from routers import (
     websocket_router,
     telemetry_router,
     alerts_router,
-    ai_analyst_router
+    ai_analyst_router,
+    energy_ai_router,
+    predictive_ml_router,
+    predictions_router
 )
 
 # Configure Logging
@@ -131,6 +140,10 @@ async def root_index():
             "station_logistics": "/api/stations/{id}/logistics",
             "station_environment": "/api/stations/{id}/environment",
             "station_research": "/api/stations/{id}/research",
+            "energy_ai_prediction": "/api/ai/energy-prediction",
+            "predictive_ml_predict": "/api/ml/predict",
+            "predictive_ml_train": "/api/ml/train",
+            "predictive_ml_status": "/api/ml/status",
             "simulations_run": "/api/simulations/run",
             "simulations_scenarios": "/api/simulations/scenarios",
             "websocket_telemetry": "/ws/telemetry"
@@ -145,6 +158,9 @@ app.include_router(websocket_router)
 app.include_router(telemetry_router)
 app.include_router(alerts_router)
 app.include_router(ai_analyst_router)
+app.include_router(energy_ai_router)
+app.include_router(predictive_ml_router)
+app.include_router(predictions_router)
 
 # Standalone Execution Entrypoint
 if __name__ == "__main__":

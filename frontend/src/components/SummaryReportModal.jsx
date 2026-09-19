@@ -42,6 +42,7 @@ import {
   Cpu,
   RefreshCw
 } from 'lucide-react';
+import { formatStationTime, getStationTimezoneLabel } from '../utils/timeUtils';
 
 export default function SummaryReportModal({
   isOpen,
@@ -609,7 +610,11 @@ export default function SummaryReportModal({
                     <div key={al.id} className="alert-mini-item">
                       <span className={`alert-priority-tag ${al.priority?.toLowerCase()}`}>{al.priority}</span>
                       <span className="alert-msg-txt">{al.message}</span>
-                      <span className="alert-time-txt">{al.triggered_at ? new Date(al.triggered_at).toLocaleTimeString() : ''}</span>
+                      <span className="alert-time-txt">
+                        {al.triggered_at 
+                          ? `${formatStationTime(al.triggered_at, selectedStation)} (${getStationTimezoneLabel(selectedStation)})` 
+                          : ''}
+                      </span>
                     </div>
                   ))}
                 </div>

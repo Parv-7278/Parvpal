@@ -21,6 +21,8 @@ import {
   Server
 } from 'lucide-react';
 import { STATIONS_DATA } from '../data/stationsData';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
+import AIPredictionIndicator from './AIPredictionIndicator';
 
 export default function InfrastructureView({ selectedStation = 'station-maitri' }) {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -231,6 +233,9 @@ export default function InfrastructureView({ selectedStation = 'station-maitri' 
           CENTER MAIN CONTENT: 3D Scene + Building Filter/Cards
           ==================================================================== */}
       <section className="infra-center-section">
+        {/* AI Predictive Intelligence Section Indicator */}
+        <AIPredictionIndicator category="infrastructure" />
+
         {/* Top 3D Digital Twin Viewport */}
         <div className="infra-scene-card polaris-card">
           <div className="infra-scene-header">
@@ -355,37 +360,56 @@ export default function InfrastructureView({ selectedStation = 'station-maitri' 
               const isWarning = b.statusType === 'warning';
 
               return (
-                <div
+                <ExpandableTelemetryCard
                   key={b.id}
-                  className={`infra-bldg-card ${isSelected ? 'selected' : ''}`}
+                  title={b.name}
+                  category={b.type || 'STATION INFRASTRUCTURE'}
+                  value={b.metricVal}
+                  status={isWarning ? 'warning' : 'nominal'}
+                  icon={Building2}
+                  color={isWarning ? '#f59e0b' : '#10b981'}
+                  subtext={`Area: ${b.area || 'N/A'} • Occupancy: ${b.occupancy || 'N/A'}`}
+                  details={[
+                    { label: 'Category', value: b.type || 'Structure', color: '#38bdf8' },
+                    { label: 'Built Year', value: b.builtYear || '2012', color: '#f8fafc' },
+                    { label: 'Occupancy', value: b.occupancy || 'Nominal', color: '#10b981' },
+                    { label: 'Floor Area', value: b.area || 'N/A', color: '#f8fafc' },
+                    { label: 'SCADA Health', value: b.maintenance?.health || '96%', color: '#10b981' },
+                  ]}
+                  interpretation={b.description || 'Polar research station structure engineered for extreme low temperature and wind load resilience.'}
+                  stationName={stationData.name}
                   onClick={() => setSelectedBuildingId(b.id)}
                 >
-                  <div className="bldg-thumb-box">
-                    <img src={b.image} alt={b.name} className="bldg-thumb-img" />
-                    <div className="thumb-scanline" />
-                  </div>
-
-                  <div className="bldg-meta-box">
-                    <div className="bldg-name-row">
-                      <span className="bldg-name">{b.name}</span>
+                  <div
+                    className={`infra-bldg-card ${isSelected ? 'selected' : ''}`}
+                  >
+                    <div className="bldg-thumb-box">
+                      <img src={b.image} alt={b.name} className="bldg-thumb-img" />
+                      <div className="thumb-scanline" />
                     </div>
 
-                    <div className="bldg-status-row">
-                      <span className={isWarning ? 'warn-dot' : 'live-dot'} />
-                      <span className={`bldg-status-txt ${isWarning ? 'text-amber' : 'text-green'}`}>
-                        {b.status}
-                      </span>
-                    </div>
-
-                    <div className="bldg-footer-row">
-                      <div className="bldg-metric-wrap">
-                        <span className="bldg-m-val mono-num">{b.metricVal}</span>
-                        <span className="bldg-m-lbl">{b.metricLabel}</span>
+                    <div className="bldg-meta-box">
+                      <div className="bldg-name-row">
+                        <span className="bldg-name">{b.name}</span>
                       </div>
-                      <ChevronRight size={14} className="bldg-arrow-icon" />
+
+                      <div className="bldg-status-row">
+                        <span className={isWarning ? 'warn-dot' : 'live-dot'} />
+                        <span className={`bldg-status-txt ${isWarning ? 'text-amber' : 'text-green'}`}>
+                          {b.status}
+                        </span>
+                      </div>
+
+                      <div className="bldg-footer-row">
+                        <div className="bldg-metric-wrap">
+                          <span className="bldg-m-val mono-num">{b.metricVal}</span>
+                          <span className="bldg-m-lbl">{b.metricLabel}</span>
+                        </div>
+                        <ChevronRight size={14} className="bldg-arrow-icon" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                </ExpandableTelemetryCard>
               );
             })}
           </div>

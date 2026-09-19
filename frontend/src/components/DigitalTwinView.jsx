@@ -13,9 +13,13 @@ import {
   RefreshCw,
   Cpu,
   Radio,
-  Maximize2
+  Maximize2,
+  Map as MapIcon,
+  Globe2,
+  Sparkles
 } from 'lucide-react';
 import DigitalTwinViewer from './DigitalTwinViewer';
+import StationDigitalTwinMap from './StationDigitalTwinMap';
 import { STATIONS_DATA } from '../data/stationsData';
 
 export default function DigitalTwinView({ selectedStation }) {
@@ -23,6 +27,7 @@ export default function DigitalTwinView({ selectedStation }) {
   const station = STATIONS_DATA[stationId] || STATIONS_DATA['station-maitri'];
   const isMaitri = station.id === 'station-maitri';
 
+  const [viewType, setViewType] = useState('MAP'); // 'MAP' (Top-Down Tactical Twin Map) or '3D' (Spatial Exterior View)
   const [selectedPin, setSelectedPin] = useState(station.pins?.[0] || null);
   const [overlayMode, setOverlayMode] = useState('STANDARD'); // STANDARD, THERMAL, ELECTRICAL
 
@@ -114,127 +119,158 @@ export default function DigitalTwinView({ selectedStation }) {
       {/* Header Banner */}
       <div className="tab-page-header">
         <div>
-          <h2 className="tab-page-title">{station.name} Station – 3D Digital Twin & SCADA Telemetry Viewport</h2>
+          <h2 className="tab-page-title">{station.name} Station – Digital Twin & Mission Control Telemetry</h2>
           <span className="tab-page-subtitle">
-            Interactive Spatial Station Model, Real-Time Subsystem Health, and Thermal Telemetry Overlays ({station.coords})
+            Interactive Tactical Floorplan, SCADA Field Actuators, and Live Subsystem Health Mesh ({station.coords})
           </span>
         </div>
-        <div className="twin-layer-controls">
-          <button 
-            className={`layer-btn ${overlayMode === 'STANDARD' ? 'active' : ''}`}
-            onClick={() => setOverlayMode('STANDARD')}
-          >
-            Standard View
-          </button>
-          <button 
-            className={`layer-btn ${overlayMode === 'THERMAL' ? 'active' : ''}`}
-            onClick={() => setOverlayMode('THERMAL')}
-          >
-            Thermal Heatmap
-          </button>
-          <button 
-            className={`layer-btn ${overlayMode === 'ELECTRICAL' ? 'active' : ''}`}
-            onClick={() => setOverlayMode('ELECTRICAL')}
-          >
-            Power Grid Bus
-          </button>
+
+        {/* View Switcher: Top-Down Tactical Twin Map vs 3D Exterior Viewport */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="twin-layer-controls">
+            <button 
+              className={`layer-btn ${viewType === 'MAP' ? 'active' : ''}`}
+              onClick={() => setViewType('MAP')}
+              title="Among-Us Styled Tactical Floorplan View"
+            >
+              <MapIcon size={14} style={{ marginRight: '4px' }} />
+              Tactical Twin Map
+            </button>
+            <button 
+              className={`layer-btn ${viewType === '3D' ? 'active' : ''}`}
+              onClick={() => setViewType('3D')}
+              title="Exterior Spatial View"
+            >
+              <Globe2 size={14} style={{ marginRight: '4px' }} />
+              3D Spatial Exterior
+            </button>
+          </div>
+
+          {viewType === '3D' && (
+            <div className="twin-layer-controls">
+              <button 
+                className={`layer-btn ${overlayMode === 'STANDARD' ? 'active' : ''}`}
+                onClick={() => setOverlayMode('STANDARD')}
+              >
+                Standard
+              </button>
+              <button 
+                className={`layer-btn ${overlayMode === 'THERMAL' ? 'active' : ''}`}
+                onClick={() => setOverlayMode('THERMAL')}
+              >
+                Thermal
+              </button>
+              <button 
+                className={`layer-btn ${overlayMode === 'ELECTRICAL' ? 'active' : ''}`}
+                onClick={() => setOverlayMode('ELECTRICAL')}
+              >
+                Power Grid
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Grid: 3D Viewport (Left) & Module Deep Inspector (Right) */}
-      <div className="digital-twin-main-grid">
-        {/* Left Column: 3D Scene Viewport */}
-        <div className="twin-viewport-column">
-          <DigitalTwinViewer 
-            selectedStation={stationId}
-            stationData={station}
-            onSelectPin={(pin) => setSelectedPin(pin)}
-          />
+      {/* Main View Area */}
+      {viewType === 'MAP' ? (
+        /* Top-Down Tactical Station Twin Map */
+        <StationDigitalTwinMap selectedStation={stationId} />
+      ) : (
+        /* 3D Scene Viewport & Module Deep Inspector */
+        <div className="digital-twin-main-grid">
+          {/* Left Column: 3D Scene Viewport */}
+          <div className="twin-viewport-column">
+            <DigitalTwinViewer 
+              selectedStation={stationId}
+              stationData={station}
+              onSelectPin={(pin) => setSelectedPin(pin)}
+            />
 
-          {/* Quick Module Navigation Selector Strip */}
-          <div className="module-pills-strip polaris-card">
-            <span className="strip-title">Station Modules:</span>
-            <div className="pills-scroll-row">
-              {stationModules.map((mod) => (
-                <button
-                  key={mod.id}
-                  className={`mod-pill-btn ${currentModule.id === mod.id ? 'active' : ''} ${mod.status === 'Warning' ? 'pill-warning' : ''}`}
-                  onClick={() => setSelectedPin({ id: mod.id, name: mod.name })}
-                >
-                  <span className={`status-dot ${mod.status === 'Warning' ? 'dot-warning' : 'dot-online'}`} />
-                  <span className="mod-btn-name">{mod.name.split('&')[0]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Deep SCADA Module Telemetry Inspector */}
-        <div className="module-inspector-column">
-          <div className="inspector-card polaris-card">
-            <div className="inspector-header">
-              <div className="ins-title-cluster">
-                <Box size={18} className="text-cyan" />
-                <div>
-                  <span className="ins-subsystem-tag">{currentModule.subsystem}</span>
-                  <h3 className="ins-module-name">{currentModule.name}</h3>
-                </div>
-              </div>
-              <div className="ins-health-badge">
-                <span className="ins-health-score mono-num">{currentModule.healthScore}</span>
-                <span className="ins-health-lbl">HEALTH</span>
-              </div>
-            </div>
-
-            {/* Quick Metrics */}
-            <div className="inspector-metrics-grid">
-              <div className="ins-metric-box">
-                <span className="ins-m-lbl">
-                  <Thermometer size={12} className="text-cyan" /> Ambient Temp
-                </span>
-                <span className="ins-m-val mono-num">{currentModule.temp}</span>
-              </div>
-              <div className="ins-metric-box">
-                <span className="ins-m-lbl">
-                  <Zap size={12} className="text-amber" /> Active Power
-                </span>
-                <span className="ins-m-val mono-num">{currentModule.power}</span>
-              </div>
-              <div className="ins-metric-box">
-                <span className="ins-m-lbl">
-                  <ShieldCheck size={12} className="text-emerald" /> Internal Pressure
-                </span>
-                <span className="ins-m-val mono-num">{currentModule.pressure}</span>
-              </div>
-            </div>
-
-            {/* Sub-Components & Actuators List */}
-            <div className="subcomponents-section">
-              <h4 className="subcomp-title">Subsystem Components & SCADA Field Devices</h4>
-              <div className="subcomp-list">
-                {currentModule.components.map((comp, idx) => (
-                  <div key={idx} className="subcomp-item-row">
-                    <div className="subcomp-left">
-                      <span className="subcomp-name">{comp.name}</span>
-                      <span className="subcomp-status">{comp.status}</span>
-                    </div>
-                    <span className="subcomp-load mono-num text-cyan">{comp.load}</span>
-                  </div>
+            {/* Quick Module Navigation Selector Strip */}
+            <div className="module-pills-strip polaris-card">
+              <span className="strip-title">Station Modules:</span>
+              <div className="pills-scroll-row">
+                {stationModules.map((mod) => (
+                  <button
+                    key={mod.id}
+                    className={`mod-pill-btn ${currentModule.id === mod.id ? 'active' : ''} ${mod.status === 'Warning' ? 'pill-warning' : ''}`}
+                    onClick={() => setSelectedPin({ id: mod.id, name: mod.name })}
+                  >
+                    <span className={`status-dot ${mod.status === 'Warning' ? 'dot-warning' : 'dot-online'}`} />
+                    <span className="mod-btn-name">{mod.name.split('&')[0]}</span>
+                  </button>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* SCADA Status Footnote */}
-            <div className="inspector-footer">
-              <div className="ins-status-indicator">
-                <span className={`live-dot ${currentModule.status === 'Warning' ? 'bg-amber' : 'bg-emerald'}`} />
-                <span>SCADA Status: <strong>{currentModule.status.toUpperCase()}</strong></span>
+          {/* Right Column: Deep SCADA Module Telemetry Inspector */}
+          <div className="module-inspector-column">
+            <div className="inspector-card polaris-card">
+              <div className="inspector-header">
+                <div className="ins-title-cluster">
+                  <Box size={18} className="text-cyan" />
+                  <div>
+                    <span className="ins-subsystem-tag">{currentModule.subsystem}</span>
+                    <h3 className="ins-module-name">{currentModule.name}</h3>
+                  </div>
+                </div>
+                <div className="ins-health-badge">
+                  <span className="ins-health-score mono-num">{currentModule.healthScore}</span>
+                  <span className="ins-health-lbl">HEALTH</span>
+                </div>
               </div>
-              <span className="ins-sync-time">Synchronized with Station Field SCADA Bus</span>
+
+              {/* Quick Metrics */}
+              <div className="inspector-metrics-grid">
+                <div className="ins-metric-box">
+                  <span className="ins-m-lbl">
+                    <Thermometer size={12} className="text-cyan" /> Ambient Temp
+                  </span>
+                  <span className="ins-m-val mono-num">{currentModule.temp}</span>
+                </div>
+                <div className="ins-metric-box">
+                  <span className="ins-m-lbl">
+                    <Zap size={12} className="text-amber" /> Active Power
+                  </span>
+                  <span className="ins-m-val mono-num">{currentModule.power}</span>
+                </div>
+                <div className="ins-metric-box">
+                  <span className="ins-m-lbl">
+                    <ShieldCheck size={12} className="text-emerald" /> Internal Pressure
+                  </span>
+                  <span className="ins-m-val mono-num">{currentModule.pressure}</span>
+                </div>
+              </div>
+
+              {/* Sub-Components & Actuators List */}
+              <div className="subcomponents-section">
+                <h4 className="subcomp-title">Subsystem Components & SCADA Field Devices</h4>
+                <div className="subcomp-list">
+                  {currentModule.components.map((comp, idx) => (
+                    <div key={idx} className="subcomp-item-row">
+                      <div className="subcomp-left">
+                        <span className="subcomp-name">{comp.name}</span>
+                        <span className="subcomp-status">{comp.status}</span>
+                      </div>
+                      <span className="subcomp-load mono-num text-cyan">{comp.load}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* SCADA Status Footnote */}
+              <div className="inspector-footer">
+                <div className="ins-status-indicator">
+                  <span className={`live-dot ${currentModule.status === 'Warning' ? 'bg-amber' : 'bg-emerald'}`} />
+                  <span>SCADA Status: <strong>{currentModule.status.toUpperCase()}</strong></span>
+                </div>
+                <span className="ins-sync-time">Synchronized with Station Field SCADA Bus</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { STATIONS_DATA } from '../data/stationsData';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
+import AIPredictionIndicator from './AIPredictionIndicator';
 
 export default function CommunicationView({ selectedStation }) {
   const stationId = selectedStation === 'all-stations' ? 'station-bharati' : selectedStation;
@@ -297,51 +299,114 @@ export default function CommunicationView({ selectedStation }) {
         </div>
       </div>
 
+      {/* AI Predictive Intelligence Section Indicator */}
+      <AIPredictionIndicator category="communication" />
+
       {/* Primary KPI Strip */}
       <div className="comm-kpi-bar">
-        <div className="comm-kpi-card">
-          <div className="kpi-label-row">
-            <Zap size={16} className="text-rose" />
-            <span className="kpi-lbl">CRITICAL (P1) LATENCY</span>
+        <ExpandableTelemetryCard
+          title="Critical (P1) Priority Latency"
+          subtitle="Instant Preemption Emergency Channel"
+          category="Communication Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Total Uplink Latency': '240 ms',
+            'Queue Delay': '0 ms (Instant Preemption)',
+            'Priority Level': 'P1 (Critical Alarm)',
+            'ISRO Sat Link': 'INSAT-4CR Ku-Band',
+            'Dispatch Policy': 'Interrupts Normal SCADA',
+            'Payload Type': 'Emergency Life Support / Generator'
+          }}
+        >
+          <div className="comm-kpi-card">
+            <div className="kpi-label-row">
+              <Zap size={16} className="text-rose" />
+              <span className="kpi-lbl">CRITICAL (P1) LATENCY</span>
+            </div>
+            <div className="kpi-big-val mono-num text-cyan">240 ms</div>
+            <div className="kpi-sub-txt">
+              Queue Delay: <span className="text-emerald font-bold">0 ms (Instant Preemption)</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num text-cyan">240 ms</div>
-          <div className="kpi-sub-txt">
-            Queue Delay: <span className="text-emerald font-bold">0 ms (Instant Preemption)</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="comm-kpi-card">
-          <div className="kpi-label-row">
-            <Clock size={16} className="text-muted" />
-            <span className="kpi-lbl">NORMAL (P3) LATENCY</span>
+        <ExpandableTelemetryCard
+          title="Normal (P3) Routine SCADA Latency"
+          subtitle="Buffered Telemetry Transmission"
+          category="Communication Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Total Uplink Latency': '485 ms',
+            'Queue Delay': '~245 ms (Buffered)',
+            'Priority Level': 'P3 (Normal Routine)',
+            'Bandwidth Throttling': 'Dynamic Rate Limiter Active',
+            'Batch Interval': 'Every 5 seconds',
+            'Buffer Utilization': '42%'
+          }}
+        >
+          <div className="comm-kpi-card">
+            <div className="kpi-label-row">
+              <Clock size={16} className="text-muted" />
+              <span className="kpi-lbl">NORMAL (P3) LATENCY</span>
+            </div>
+            <div className="kpi-big-val mono-num">485 ms</div>
+            <div className="kpi-sub-txt">
+              Queue Delay: <span className="text-amber font-bold">~245 ms</span> (Buffered)
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">485 ms</div>
-          <div className="kpi-sub-txt">
-            Queue Delay: <span className="text-amber font-bold">~245 ms</span> (Buffered)
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="comm-kpi-card">
-          <div className="kpi-label-row">
-            <Signal size={16} className="text-emerald" />
-            <span className="kpi-lbl">CARRIER SNR & BER</span>
+        <ExpandableTelemetryCard
+          title="Space-Ground Carrier SNR & Bit Error Rate"
+          subtitle="RF Demodulator & Link Margin"
+          category="RF Telemetry"
+          status="ONLINE"
+          metrics={{
+            'Carrier SNR': '14.8 dB',
+            'Bit Error Rate (BER)': '1.2 × 10⁻⁸ (Zero Loss)',
+            'Link Margin': '+4.2 dB above fade margin',
+            'Rain/Snow Fade': '0.3 dB (Minimal)',
+            'Modulation': 'QPSK DVB-S2X',
+            'FEC Coding': 'LDPC 3/4'
+          }}
+        >
+          <div className="comm-kpi-card">
+            <div className="kpi-label-row">
+              <Signal size={16} className="text-emerald" />
+              <span className="kpi-lbl">CARRIER SNR & BER</span>
+            </div>
+            <div className="kpi-big-val mono-num text-emerald">14.8 dB</div>
+            <div className="kpi-sub-txt">
+              BER: <span className="text-emerald font-bold">1.2 × 10⁻⁸ (Zero Loss)</span>
+            </div>
           </div>
-          <div className="kpi-big-val mono-num text-emerald">14.8 dB</div>
-          <div className="kpi-sub-txt">
-            BER: <span className="text-emerald font-bold">1.2 × 10⁻⁸ (Zero Loss)</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="comm-kpi-card">
-          <div className="kpi-label-row">
-            <Server size={16} className="text-purple" />
-            <span className="kpi-lbl">GROUND GATEWAYS</span>
+        <ExpandableTelemetryCard
+          title="Ground Telemetry Gateways & Fiber Backbone"
+          subtitle="ISRO / NCPOR Mission Operations Centers"
+          category="Ground Stations"
+          status="ONLINE"
+          metrics={{
+            'Primary Gateway': 'NCPOR Mission Control, Goa',
+            'Secondary Gateway': 'NRSC Shadnagar / Hyderabad',
+            'Redundancy': 'Dual Geo-diverse Redundant Fibers',
+            'Uptime SLA': '99.98% Annual',
+            'Encrypted Tunnel': 'IPSec AES-256 GCM',
+            'Station Link': `${station.name} SCADA Terminal`
+          }}
+        >
+          <div className="comm-kpi-card">
+            <div className="kpi-label-row">
+              <Server size={16} className="text-purple" />
+              <span className="kpi-lbl">GROUND GATEWAYS</span>
+            </div>
+            <div className="kpi-big-val mono-num">NCPOR Goa & NRSC</div>
+            <div className="kpi-sub-txt">
+              Dual Redundant Fiber Backbone
+            </div>
           </div>
-          <div className="kpi-big-val mono-num">NCPOR Goa & NRSC</div>
-          <div className="kpi-sub-txt">
-            Dual Redundant Fiber Backbone
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
       </div>
 
       {/* Inner Sub-Navigation Pills */}
@@ -491,7 +556,7 @@ export default function CommunicationView({ selectedStation }) {
                           className="chart-bar-group"
                           onMouseEnter={() => setHoveredBarIndex(idx)}
                           onMouseLeave={() => setHoveredBarIndex(null)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'default' }}
                         >
                           {/* Background highlight pill on hover */}
                           {isHovered && (
@@ -1084,54 +1149,72 @@ export default function CommunicationView({ selectedStation }) {
         <div className="comm-satellites-tab-layout">
           <div className="sat-detailed-grid">
             {satelliteLinks.map((sat) => (
-              <div key={sat.id} className="sat-detail-card polaris-card">
-                <div className="sat-detail-header">
-                  <div className="sat-head-left">
-                    <div className="sat-icon-circle">
-                      <Satellite size={22} className="text-cyan" />
+              <ExpandableTelemetryCard
+                key={sat.id}
+                title={sat.name}
+                subtitle={sat.role}
+                category="ISRO Satellite Link"
+                status={sat.status}
+                metrics={{
+                  'RF Frequency Band': sat.frequency,
+                  'Carrier SNR Quality': `${sat.snr} (${sat.snrStatus})`,
+                  'Bit Error Rate': sat.ber,
+                  'Antenna Pointing': `${sat.azimuth} / ${sat.elevation}`,
+                  'Space-Ground Transit': sat.latency,
+                  'Ground Dish Diameter': sat.dishSize,
+                  'Target Coverage Area': sat.coverage,
+                  'Transponder Payload': 'Redundant Ku-Band Matrix'
+                }}
+              >
+                <div className="sat-detail-card polaris-card">
+                  <div className="sat-detail-header">
+                    <div className="sat-head-left">
+                      <div className="sat-icon-circle">
+                        <Satellite size={22} className="text-cyan" />
+                      </div>
+                      <div>
+                        <h3 className="sat-title-big">{sat.name}</h3>
+                        <span className="sat-role-big">{sat.role}</span>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="sat-title-big">{sat.name}</h3>
-                      <span className="sat-role-big">{sat.role}</span>
+                    <div className="sat-status-badge">
+                      <span className="live-dot" />
+                      <span>{sat.status}</span>
                     </div>
                   </div>
-                  <div className="sat-status-badge">
-                    <span className="live-dot" />
-                    <span>{sat.status}</span>
-                  </div>
-                </div>
 
-                <div className="sat-params-list">
-                  <div className="sat-param-row">
-                    <span className="p-lbl">RF Frequency Band:</span>
-                    <span className="p-val text-cyan">{sat.frequency}</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Carrier SNR Quality:</span>
-                    <span className="p-val text-emerald font-bold">{sat.snr} ({sat.snrStatus})</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Bit Error Rate (BER):</span>
-                    <span className="p-val mono-num text-emerald">{sat.ber}</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Pointing Azimuth / Elevation:</span>
-                    <span className="p-val mono-num">{sat.azimuth} / {sat.elevation}</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Simulated Space-Ground Transit:</span>
-                    <span className="p-val mono-num text-cyan font-bold">{sat.latency}</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Antarctic Station Terminal:</span>
-                    <span className="p-val">{sat.dishSize}</span>
-                  </div>
-                  <div className="sat-param-row">
-                    <span className="p-lbl">Operational Mission Footprint:</span>
-                    <span className="p-val text-muted">{sat.coverage}</span>
+                  <div className="sat-params-list">
+                    <div className="sat-param-row">
+                      <span className="p-lbl">RF Frequency Band:</span>
+                      <span className="p-val text-cyan">{sat.frequency}</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Carrier SNR Quality:</span>
+                      <span className="p-val text-emerald font-bold">{sat.snr} ({sat.snrStatus})</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Bit Error Rate (BER):</span>
+                      <span className="p-val mono-num text-emerald">{sat.ber}</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Pointing Azimuth / Elevation:</span>
+                      <span className="p-val mono-num">{sat.azimuth} / {sat.elevation}</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Simulated Space-Ground Transit:</span>
+                      <span className="p-val mono-num text-cyan font-bold">{sat.latency}</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Antarctic Station Terminal:</span>
+                      <span className="p-val">{sat.dishSize}</span>
+                    </div>
+                    <div className="sat-param-row">
+                      <span className="p-lbl">Operational Mission Footprint:</span>
+                      <span className="p-val text-muted">{sat.coverage}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ExpandableTelemetryCard>
             ))}
           </div>
         </div>

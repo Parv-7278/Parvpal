@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTelemetry } from '../context/TelemetryContext';
 import { fetchRemoteOperations, executeRemoteCommand } from '../services/api';
 import { STATIONS_DATA } from '../data/stationsData';
+import { formatStationTime, getStationTimezoneLabel } from '../utils/timeUtils';
 
 export default function RemoteOperationsView({ selectedStation }) {
   const { profile, isIndiaOperator, assignedStation } = useAuth();
@@ -325,7 +326,7 @@ export default function RemoteOperationsView({ selectedStation }) {
                         <td className="operator-cell">{entry.operator || 'Mission Controller'}</td>
                         <td className="time-cell">
                           {entry.timestamp 
-                            ? new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                            ? `${formatStationTime(entry.timestamp, entry.stationId)} (${getStationTimezoneLabel(entry.stationId)})`
                             : 'Just now'}
                         </td>
                         <td>

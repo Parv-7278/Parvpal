@@ -18,6 +18,8 @@ export const STATIONS_DATA = {
     heroImage: '/stations/maitri.jpg',
     altitude: '117 m above sea level',
     environmentType: 'Inland Rocky Moraine (Lake Priyadarshini Oasis)',
+    timezone: 'UTC',
+    timezone_label: 'UTC+0',
 
     // Health Scores
     health: {
@@ -491,6 +493,8 @@ export const STATIONS_DATA = {
     heroImage: '/stations/bharati.jpg',
     altitude: '35 m above sea level',
     environmentType: 'Coastal Antarctic Promontory (Prydz Bay Maritime)',
+    timezone: 'Antarctica/Mawson',
+    timezone_label: 'UTC+5',
 
     // Health Scores
     health: {

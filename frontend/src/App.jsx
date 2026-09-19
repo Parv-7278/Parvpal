@@ -30,6 +30,9 @@ import LandingPage from './components/LandingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TelemetryProvider, useTelemetry } from './context/TelemetryContext';
 import { ModalProvider, useModal } from './context/ModalContext';
+import { PredictiveProvider, usePredictive } from './context/PredictiveContext';
+import AIPredictionCenter from './components/AIPredictionCenter';
+import AIPredictionModal from './components/AIPredictionModal';
 import { STATIONS_DATA } from './data/stationsData';
 import './App.css';
 
@@ -170,6 +173,9 @@ function MainDashboard() {
 
           {/* Center Main Content Area */}
           <section className="polaris-col-center">
+            {/* Primary AI Predictive Intelligence Center */}
+            <AIPredictionCenter />
+
             <DigitalTwinViewer 
               selectedStation={effectiveStationId}
               stationData={stationData}
@@ -295,6 +301,8 @@ function MainDashboard() {
           </div>
         </div>
       )}
+      {/* Global AI Predictive Intelligence Modal */}
+      <AIPredictionModal />
     </div>
   );
 }
@@ -315,7 +323,9 @@ export default function App() {
     <AuthProvider>
       <TelemetryProvider>
         <ModalProvider>
-          <AppContent />
+          <PredictiveProvider>
+            <AppContent />
+          </PredictiveProvider>
         </ModalProvider>
       </TelemetryProvider>
     </AuthProvider>

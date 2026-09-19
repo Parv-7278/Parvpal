@@ -1,10 +1,8 @@
 import React from 'react';
 import { AlertTriangle, Flame, Wind, BellRing } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
 
 export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenViewAll, selectedStation = 'Maitri Station' }) {
-  const { openDrillDown } = useModal();
-
   const defaultAlerts = [
     {
       id: 'alert-1',
@@ -64,25 +62,6 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
     };
   });
 
-  const handleAlertClick = (alert) => {
-    openDrillDown({
-      title: `Alert: ${alert.title}`,
-      type: 'ALERT_DETAIL',
-      category: 'ALERT',
-      currentValue: alert.severity.toUpperCase(),
-      unit: 'Severity',
-      status: alert.severity === 'critical' ? 'CRITICAL' : 'WARNING',
-      interpretation: alert.details || `${alert.title} reported on ${alert.source} at ${alert.time}.`,
-      recommendation: 'Follow standard Antarctic mission control standard operating procedures (SOP).',
-      station: selectedStation,
-      metadata: {
-        source: alert.source,
-        timestamp: alert.time,
-        severity: alert.severity,
-      }
-    });
-  };
-
   return (
     <div className="active-alerts-section polaris-card">
       <div className="card-header-with-action">
@@ -99,26 +78,40 @@ export default function ActiveAlerts({ alerts: alertsProp, unreadCount, onOpenVi
         {alertsList.map((item) => {
           const Icon = item.icon;
           return (
-            <div 
-              key={item.id} 
-              className={`alert-list-item ${item.severity} interactive-card`}
-              onClick={() => handleAlertClick(item)}
+            <ExpandableTelemetryCard
+              key={item.id}
+              title={item.title}
+              subtitle={`${item.source} • Logged at ${item.time}`}
+              category="Mission Alert Telemetry"
+              status={item.severity.toUpperCase()}
+              metrics={{
+                'Alert Source': item.source,
+                'Severity Level': item.severity.toUpperCase(),
+                'Timestamp': item.time,
+                'Diagnostic Details': item.details || 'Automated sensor threshold trip detected.',
+                'Recommended Action': item.severity === 'critical' ? 'Immediate engineering intervention required' : 'Monitor trend closely',
+                'Station ID': selectedStation
+              }}
             >
               <div 
-                className="alert-icon-wrap"
-                style={{ backgroundColor: item.iconBg, color: item.iconColor }}
+                className={`alert-list-item ${item.severity}`}
               >
-                <Icon size={15} />
-              </div>
-              
-              <div className="alert-content-wrap">
-                <div className="alert-title-row">
-                  <span className="alert-item-title">{item.title}</span>
-                  <span className="alert-item-time mono-num">{item.time}</span>
+                <div 
+                  className="alert-icon-wrap"
+                  style={{ backgroundColor: item.iconBg, color: item.iconColor }}
+                >
+                  <Icon size={15} />
                 </div>
-                <div className="alert-item-source">{item.source}</div>
+                
+                <div className="alert-content-wrap">
+                  <div className="alert-title-row">
+                    <span className="alert-item-title">{item.title}</span>
+                    <span className="alert-item-time mono-num">{item.time}</span>
+                  </div>
+                  <div className="alert-item-source">{item.source}</div>
+                </div>
               </div>
-            </div>
+            </ExpandableTelemetryCard>
           );
         })}
       </div>

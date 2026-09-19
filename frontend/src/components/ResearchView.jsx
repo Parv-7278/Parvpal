@@ -58,6 +58,9 @@ import { useTelemetry } from '../context/TelemetryContext';
 import { useModal } from '../context/ModalContext';
 import { analyzeResearchData, askResearchAI, getAIAnalystStatus, generate24HourReport } from '../services/api';
 import SummaryReportModal from './SummaryReportModal';
+import ResearchAnalysisModal from './ResearchAnalysisModal';
+import HistoricalComparisonModal from './HistoricalComparisonModal';
+import { useStationClock, getStationTimezone, getStationTimezoneLabel } from '../utils/timeUtils';
 
 export default function ResearchView({ selectedStation = 'station-maitri', onSelectStation }) {
   const { profile, isIndiaOperator, isStationOperator, assignedStation } = useAuth();
@@ -81,6 +84,8 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
   // Visualization Card state (Maitri layout)
   const [visCategory, setVisCategory] = useState('satellite');
   const [selectedDate, setSelectedDate] = useState('10 Sep 2025');
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const [is3DView, setIs3DView] = useState(false);
   const [layers, setLayers] = useState({
     surfaceTemp: true,
     snowDepth: true,
@@ -100,6 +105,10 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
     }
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+
+  // Analysis & Historical Comparison Modals State
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
 
   // 24-Hour Comprehensive Summary Report State
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -155,18 +164,8 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
   };
 
   // Time & Live Clock
-  const [currentTimeStr, setCurrentTimeStr] = useState('12 Sep 2025 | 14:32 IST');
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      setCurrentTimeStr(`${dateStr} | ${timeStr} IST`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const stationClock = useStationClock(effectiveStation);
+  const currentTimeStr = stationClock.dateTimeStr;
 
   // Update initial message when station changes
   useEffect(() => {
@@ -185,16 +184,68 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
     setLayers(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
+  // Handle Direct View Analysis Modal
+  const handleViewAnalysis = () => {
+    setIsAnalysisModalOpen(true);
+    setAiMessages(prev => [
+      ...prev,
+      { id: Date.now(), sender: 'user', text: 'View detailed satellite analysis' },
+      { 
+        id: Date.now() + 1, 
+        sender: 'ai', 
+        text: `Opening high-resolution CryoSat-2 & ISRO NISAR satellite cryosphere briefing for ${stationDisplayName} Station. Subsurface firn compaction and +12% ice velocity surge highlighted.`,
+        hasAnalysisAction: true 
+      }
+    ]);
+    openDrillDown({
+      title: `Detailed Satellite Cryosphere & Ice Dynamics Analysis (${stationDisplayName})`,
+      type: 'RESEARCH_ANALYSIS',
+      station: stationDisplayName
+    });
+  };
+
+  // Handle Direct Compare with Past Modal
+  const handleCompareWithPast = () => {
+    setIsComparisonModalOpen(true);
+    setAiMessages(prev => [
+      ...prev,
+      { id: Date.now(), sender: 'user', text: 'Compare with historical cryosphere data' },
+      { 
+        id: Date.now() + 1, 
+        sender: 'ai', 
+        text: `Compiling 5-year longitudinal cryosphere comparative benchmark (2021–2026) for ${stationDisplayName} Station. Decadal warming rate +0.32°C/decade recorded.`,
+        hasCompareAction: true 
+      }
+    ]);
+    openDrillDown({
+      title: `5-Year Historical Cryosphere & Climate Comparison (${stationDisplayName})`,
+      type: 'HISTORICAL_COMPARISON',
+      station: stationDisplayName
+    });
+  };
+
   // Connected AI Analysis API Call
   const handleSendAiMessage = async (queryText) => {
     const query = queryText || aiInput;
     if (!query.trim()) return;
 
+    const qLower = query.toLowerCase();
+    if (qLower.includes('analysis') || qLower.includes('satellite') || qLower.includes('view analysis')) {
+      handleViewAnalysis();
+      setAiInput('');
+      return;
+    }
+
+    if (qLower.includes('past') || qLower.includes('compare') || qLower.includes('history') || qLower.includes('historical')) {
+      handleCompareWithPast();
+      setAiInput('');
+      return;
+    }
+
     const userMsg = { id: Date.now(), sender: 'user', text: query };
     setAiMessages(prev => [...prev, userMsg]);
     setAiInput('');
 
-    const qLower = query.toLowerCase();
     if (qLower.includes('summary report') || qLower.includes('24h report') || qLower.includes('24-hour report') || qLower.includes('operational report')) {
       handleGenerateSummaryReport(effectiveStation);
       return;
@@ -206,7 +257,9 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
       const response = await askResearchAI({
         stationId: effectiveStation,
         question: query,
-        timeRange: '7d'
+        timeRange: '7d',
+        timezone: getStationTimezone(effectiveStation),
+        timezone_label: getStationTimezoneLabel(effectiveStation)
       }, profile?.role, profile?.assigned_station);
 
       if (response?.hasReportAction && response?.summaryReportData) {
@@ -229,9 +282,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
     } catch (err) {
       let reply = `Analysis complete for ${stationDisplayName} Station: Subsurface cryosphere profiles indicate steady compaction. CryoSat-2 and NISAR interferometry models confirm localized ice shelf grounding line equilibrium.`;
       let hasAction = false;
-      if (query.toLowerCase().includes('past') || query.toLowerCase().includes('compare')) {
-        reply = `Historical Comparison (2020-2025): ${stationDisplayName} Station thermal deviation is +0.42°C above the 5-year mean. Glacial accumulation rate remains within normal stochastic tolerance.`;
-      } else if (query.toLowerCase().includes('summary') || query.toLowerCase().includes('report')) {
+      if (query.toLowerCase().includes('summary') || query.toLowerCase().includes('report')) {
         reply = `Summary Synthesis: ${isBharati ? '8' : '12'} active research projects across Glaciology, Atmospheric Sciences, and Space Weather. Telemetry throughput 99.8% nominal via Ku-Band ISRO satellite downlink.`;
         hasAction = true;
       }
@@ -353,26 +404,6 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
     { id: 2, title: 'Fuel Level Low', time: '10:21 AM', desc: 'Diesel Tank 2 (Refill Required)', icon: Shield, color: '#f59e0b' },
     { id: 3, title: 'Temperature Anomaly', time: '08:17 AM', desc: 'Lab 3 (Ice Core Storage)', icon: Thermometer, color: '#f59e0b' },
   ];
-
-  // Handle Drill-Down Modal
-  const handleKpiDrillDown = (title, value, unit, category, interpretation) => {
-    openDrillDown({
-      title,
-      type: 'DRILL_DOWN',
-      category: 'RESEARCH',
-      currentValue: value,
-      unit,
-      status: 'NORMAL',
-      interpretation: interpretation || `Historical telemetry trend and database analytics for ${title}.`,
-      recommendation: 'All research scientific sensors operating within nominal tolerance limits.',
-      station: stationDisplayName + ' Station',
-      historicalData: chartPoints.map(p => ({
-        time: p.day,
-        value: p.sensor * 2,
-        baseline: 5
-      }))
-    });
-  };
 
   return (
     <div className="india-dashboard-container">
@@ -496,20 +527,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         </nav>
 
         {/* STATION HEALTH INDEX CARD */}
-        <div 
-          className="sidebar-health-card interactive-card"
-          onClick={() => openDrillDown({
-            title: `${stationDisplayName} Station Health Index`,
-            type: 'DRILL_DOWN',
-            category: 'HEALTH',
-            currentValue: isBharati ? 84 : 87,
-            unit: '/100',
-            status: 'GOOD',
-            interpretation: 'Overall composite health index is optimal across Infrastructure, Energy, Logistics, Environment, and Communication subsystems.',
-            recommendation: 'Scheduled routine inspection on Generator G-02 thermal radiators.',
-            station: stationDisplayName + ' Station'
-          })}
-        >
+        <div className="sidebar-health-card">
           <div className="card-mini-title">STATION HEALTH INDEX</div>
           
           <div className="health-gauge-box">
@@ -587,20 +605,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
               {bharatiSidebarAlerts.map((alt) => {
                 const IconComp = alt.icon;
                 return (
-                  <div 
-                    key={alt.id} 
-                    className="bharati-alert-row-item interactive-card"
-                    onClick={() => openDrillDown({
-                      title: alt.title,
-                      type: 'DRILL_DOWN',
-                      category: 'ALERT',
-                      currentValue: alt.time,
-                      status: 'WARNING',
-                      interpretation: alt.desc,
-                      recommendation: 'Scheduled telemetry maintenance protocol initiated.',
-                      station: 'Bharati Station'
-                    })}
-                  >
+                  <div key={alt.id} className="bharati-alert-row-item">
                     <div className="b-alt-icon-wrap" style={{ color: alt.color }}>
                       <IconComp size={13} />
                     </div>
@@ -632,19 +637,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
               {currentProjects.slice(0, 3).map((proj) => {
                 const IconComp = proj.icon;
                 return (
-                  <div 
-                    key={proj.id} 
-                    className="active-res-item interactive-card"
-                    onClick={() => openDrillDown({
-                      title: proj.name,
-                      type: 'DRILL_DOWN',
-                      category: 'RESEARCH_PROJECT',
-                      currentValue: proj.status,
-                      interpretation: proj.sub,
-                      recommendation: `Campaign timeline: ${proj.daysLeft}. Data stream link active.`,
-                      station: stationDisplayName + ' Station'
-                    })}
-                  >
+                  <div key={proj.id} className="active-res-item">
                     <div className="active-res-icon-wrap">
                       <IconComp size={13} className="text-cyan" />
                     </div>
@@ -658,20 +651,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
             </div>
 
             {/* Bottom Weather Pill */}
-            <div 
-              className="sidebar-weather-pill interactive-card"
-              onClick={() => openDrillDown({
-                title: 'Surface Temperature & Weather',
-                type: 'DRILL_DOWN',
-                category: 'ENVIRONMENT',
-                currentValue: -18.7,
-                unit: '°C',
-                status: 'NORMAL',
-                interpretation: 'Ambient conditions with light Antarctic snowfall and steady barometric gradient.',
-                recommendation: 'Routine outdoor movements cleared under Level-1 weather safety protocol.',
-                station: stationDisplayName + ' Station'
-              })}
-            >
+            <div className="sidebar-weather-pill">
               <div className="w-pill-left">
                 <CloudSnow size={15} className="text-cyan" />
                 <div className="w-pill-text">
@@ -679,7 +659,6 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                   <span className="w-pill-cond">Light Snow</span>
                 </div>
               </div>
-              <ChevronRight size={14} className="text-dim" />
             </div>
           </div>
         )}
@@ -857,10 +836,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         {/* 5 TOP METRIC KPI CARDS HORIZONTAL STRIP */}
         <div className="research-kpi-ribbon-5col">
           {/* Card 1 */}
-          <div 
-            className="kpi-box-item interactive-card"
-            onClick={() => handleKpiDrillDown(isBharati ? 'Active Research Projects' : 'Total Research Projects', isBharati ? 8 : 12, 'Projects', 'PROJECTS', isBharati ? '5 Ongoing, 2 Planned, 1 Completed research missions.' : '6 Active, 4 Completed, 2 Planned scientific programs under NCPOR.')}
-          >
+          <div className="kpi-box-item">
             <div className="kpi-icon-square">
               <Compass size={18} className="text-cyan" />
             </div>
@@ -879,10 +855,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           </div>
 
           {/* Card 2 */}
-          <div 
-            className="kpi-box-item interactive-card"
-            onClick={() => handleKpiDrillDown('Data Collected (This Month)', isBharati ? 6.2 : 4.8, 'TB', 'DATA', `Telemetry ingest rate increased by ${isBharati ? '18%' : '12%'} vs previous observation cycle.`)}
-          >
+          <div className="kpi-box-item">
             <div className="kpi-icon-square">
               <Database size={18} className="text-cyan" />
             </div>
@@ -896,10 +869,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           </div>
 
           {/* Card 3 */}
-          <div 
-            className="kpi-box-item interactive-card"
-            onClick={() => handleKpiDrillDown(isBharati ? 'Field Campaigns' : 'Active Field Campaigns', isBharati ? 2 : 3, 'Campaigns', 'FIELD', isBharati ? 'Glaciology and Atmospheric field teams deployed across Larsemann Hills promontories.' : 'Glaciology, Atmospheric, and Marine field teams on scheduled traverses.')}
-          >
+          <div className="kpi-box-item">
             <div className="kpi-icon-square">
               <MapPin size={18} className="text-cyan" />
             </div>
@@ -915,10 +885,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           </div>
 
           {/* Card 4 */}
-          <div 
-            className="kpi-box-item interactive-card"
-            onClick={() => handleKpiDrillDown('Research Personnel', isBharati ? 16 : 18, 'Scientists', 'PERSONNEL', `${isBharati ? '16' : '18'} Active researchers on 44th Indian Antarctic Expedition.`)}
-          >
+          <div className="kpi-box-item">
             <div className="kpi-icon-square">
               <Users size={18} className="text-cyan" />
             </div>
@@ -932,10 +899,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           </div>
 
           {/* Card 5 */}
-          <div 
-            className="kpi-box-item interactive-card"
-            onClick={() => handleKpiDrillDown('Key Publications', isBharati ? 5 : 7, 'Papers', 'PUBLICATIONS', `${isBharati ? '5' : '7'} submitted papers across Polar Science, Nature Geoscience and JGR.`)}
-          >
+          <div className="kpi-box-item">
             <div className="kpi-icon-square">
               <FileText size={18} className="text-cyan" />
             </div>
@@ -957,25 +921,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         <div className={isBharati ? "bharati-middle-3col-grid" : "research-middle-grid"}>
           
           {/* MIDDLE COLUMN 1: Research Activity & Data Flow Line Chart */}
-          <div 
-            className="research-chart-card interactive-card"
-            onClick={() => openDrillDown({
-              title: 'Telemetry & Scientific Data Flow',
-              type: 'DRILL_DOWN',
-              category: 'DATA_FLOW',
-              currentValue: '3.8 GB/day',
-              status: 'NORMAL',
-              interpretation: 'Continuous streaming across Satellite Data (cyan), Field Data (green), and Laboratory Spectrometers (yellow).',
-              recommendation: 'ISRO satellite downlink bandwidth allocation is 99.8% optimal.',
-              station: stationDisplayName + ' Station',
-              historicalData: chartPoints.map(p => ({
-                time: p.day,
-                sensor: p.sensor,
-                field: p.field,
-                lab: p.lab
-              }))
-            })}
-          >
+          <div className="research-chart-card">
             <div className="chart-card-top-header">
               <h3 className="chart-card-title">Research Activity &amp; Data Flow</h3>
               <div className="chart-controls-cluster">
@@ -1037,19 +983,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
               {currentProjects.map((p) => {
                 const IconComp = p.icon;
                 return (
-                  <div 
-                    key={p.id} 
-                    className="r-project-row interactive-card"
-                    onClick={() => openDrillDown({
-                      title: p.name,
-                      type: 'DRILL_DOWN',
-                      category: 'RESEARCH_PROJECT',
-                      currentValue: p.status,
-                      interpretation: p.sub,
-                      recommendation: `Operational time remaining: ${p.daysLeft}. Real-time telemetry linked.`,
-                      station: stationDisplayName + ' Station'
-                    })}
-                  >
+                  <div key={p.id} className="r-project-row">
                     <div className="r-proj-left">
                       <div className="r-proj-icon-circle">
                         <IconComp size={13} className="text-cyan" />
@@ -1080,20 +1014,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                 {bharatiLiveFeed.map((item) => {
                   const IconComp = item.icon;
                   return (
-                    <div 
-                      key={item.id} 
-                      className="feed-row-item interactive-card"
-                      onClick={() => openDrillDown({
-                        title: item.title,
-                        type: 'DRILL_DOWN',
-                        category: 'FEED_EVENT',
-                        currentValue: item.time,
-                        status: 'NORMAL',
-                        interpretation: item.desc,
-                        recommendation: 'Log stored in telemetry database repository.',
-                        station: 'Bharati Station'
-                      })}
-                    >
+                    <div key={item.id} className="feed-row-item">
                       <div className="feed-icon-circle">
                         <IconComp size={11} className="text-cyan" />
                       </div>
@@ -1120,19 +1041,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
           <div className="bharati-bottom-4col-grid">
             
             {/* 1. Environmental Conditions Card */}
-            <div 
-              className="bharati-env-conditions-card interactive-card"
-              onClick={() => openDrillDown({
-                title: 'Bharati Environmental Conditions',
-                type: 'DRILL_DOWN',
-                category: 'ENVIRONMENT',
-                currentValue: '-18.7°C',
-                status: 'NORMAL',
-                interpretation: 'Continuous meteorological monitoring for Larsemann Hills. Ambient light snow with steady barometric gradient.',
-                recommendation: 'All parameters within standard operating safety thresholds.',
-                station: 'Bharati Station'
-              })}
-            >
+            <div className="bharati-env-conditions-card">
               <div className="b-card-header">
                 <h3 className="card-heading-title">Environmental Conditions</h3>
                 <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSidebarTab('environment'); }}>View Details →</span>
@@ -1211,19 +1120,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
             </div>
 
             {/* 2. Resource & Equipment Status Card */}
-            <div 
-              className="bharati-resource-equip-card interactive-card"
-              onClick={() => openDrillDown({
-                title: 'Bharati Resource & Equipment Status',
-                type: 'DRILL_DOWN',
-                category: 'LOGISTICS',
-                currentValue: 'OPERATIONAL',
-                status: 'NORMAL',
-                interpretation: 'Fuel storage at 68%, Power generation at 76%, Potable water at 82%, Food & spare supplies at 71%.',
-                recommendation: 'Generator G-02 scheduled for routine oil replacement.',
-                station: 'Bharati Station'
-              })}
-            >
+            <div className="bharati-resource-equip-card">
               <div className="b-card-header">
                 <h3 className="card-heading-title">Resource &amp; Equipment Status</h3>
                 <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSidebarTab('infrastructure'); }}>View All →</span>
@@ -1311,19 +1208,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
             </div>
 
             {/* 3. Research Insights Card */}
-            <div 
-              className="bharati-insights-card interactive-card"
-              onClick={() => openDrillDown({
-                title: 'Bharati Research Insights Synthesis',
-                type: 'DRILL_DOWN',
-                category: 'RESEARCH_AI',
-                currentValue: '3 ACTIVE INSIGHTS',
-                status: 'NORMAL',
-                interpretation: 'Continuous multi-spectral analysis combining CryoSat-2 altimetry, CO2 spectrometers, and broadband seismometers.',
-                recommendation: 'Increase satellite interferometry acquisition cadence over Prydz Bay.',
-                station: 'Bharati Station'
-              })}
-            >
+            <div className="bharati-insights-card">
               <div className="b-card-header">
                 <h3 className="card-heading-title">Research Insights</h3>
                 <span className="view-all-action-btn" onClick={(e) => { e.stopPropagation(); setSubTab('data'); }}>View All →</span>
@@ -1421,15 +1306,35 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                       <FileText size={11} /> View Full 24-Hour Operational Report
                     </button>
                   )}
+                  {aiMessages[aiMessages.length - 1]?.hasAnalysisAction && (
+                    <button 
+                      type="button"
+                      className="ai-view-report-inline-btn"
+                      style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: '6px', color: '#38bdf8', fontSize: '11px', cursor: 'pointer' }}
+                      onClick={() => setIsAnalysisModalOpen(true)}
+                    >
+                      <Layers size={11} /> Open Detailed Satellite Analysis
+                    </button>
+                  )}
+                  {aiMessages[aiMessages.length - 1]?.hasCompareAction && (
+                    <button 
+                      type="button"
+                      className="ai-view-report-inline-btn"
+                      style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '6px', color: '#c084fc', fontSize: '11px', cursor: 'pointer' }}
+                      onClick={() => setIsComparisonModalOpen(true)}
+                    >
+                      <GitCompare size={11} /> Open 5-Year Historical Comparison
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Quick Action Suggestion Buttons */}
               <div className="b-ai-actions-row">
-                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('View analysis')}>
+                <button type="button" className="b-ai-pill-btn" onClick={handleViewAnalysis}>
                   View Analysis
                 </button>
-                <button type="button" className="b-ai-pill-btn" onClick={() => handleSendAiMessage('Compare with past')}>
+                <button type="button" className="b-ai-pill-btn" onClick={handleCompareWithPast}>
                   Compare with Past
                 </button>
                 <button 
@@ -1503,113 +1408,216 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
               </div>
 
               {/* Map Canvas with Controls Overlay */}
-              <div className="vis-canvas-container">
-                <div className="vis-overlay-controls">
-                  <div className="vis-date-dropdown">
-                    <Calendar size={11} className="text-cyan" />
-                    <span>{selectedDate}</span>
-                    <ChevronDown size={11} />
+              <div className={`vis-canvas-container ${is3DView ? 'mode-3d-active' : ''}`}>
+                
+                {/* Top-Left Date Dropdown */}
+                <div className="sat-date-pill" onClick={() => setDateDropdownOpen(!dateDropdownOpen)}>
+                  <Calendar size={13} className="text-cyan" />
+                  <span className="sat-date-text">{selectedDate}</span>
+                  <ChevronDown size={13} className={`sat-date-chevron ${dateDropdownOpen ? 'rotate-180' : ''}`} />
+                  {dateDropdownOpen && (
+                    <div className="sat-date-menu">
+                      {['10 Sep 2025', '09 Sep 2025', '08 Sep 2025', '05 Sep 2025', '01 Sep 2025', 'Historical Mean'].map((d) => (
+                        <div
+                          key={d}
+                          className={`sat-date-item ${d === selectedDate ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDate(d);
+                            setDateDropdownOpen(false);
+                          }}
+                        >
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Left Layers Checklist Panel */}
+                <div className="sat-layers-panel">
+                  <div className="sat-layer-row" onClick={() => handleToggleLayer('surfaceTemp')}>
+                    <div className={`sat-custom-checkbox ${layers.surfaceTemp ? 'checked' : ''}`}>
+                      {layers.surfaceTemp && <Check size={11} strokeWidth={3} />}
+                    </div>
+                    <span className="sat-layer-label">Surface Temperature</span>
                   </div>
 
-                  <div className="vis-layers-checklist">
-                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('surfaceTemp')}>
-                      <input type="checkbox" checked={layers.surfaceTemp} readOnly />
-                      <span>Surface Temperature</span>
-                    </label>
-                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('snowDepth')}>
-                      <input type="checkbox" checked={layers.snowDepth} readOnly />
-                      <span>Snow Depth</span>
-                    </label>
-                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('iceVelocity')}>
-                      <input type="checkbox" checked={layers.iceVelocity} readOnly />
-                      <span>Ice Velocity</span>
-                    </label>
-                    <label className="vis-checkbox-lbl" onClick={() => handleToggleLayer('elevation')}>
-                      <input type="checkbox" checked={layers.elevation} readOnly />
-                      <span>Elevation</span>
-                    </label>
+                  <div className="sat-layer-row" onClick={() => handleToggleLayer('snowDepth')}>
+                    <div className={`sat-custom-checkbox ${layers.snowDepth ? 'checked' : ''}`}>
+                      {layers.snowDepth && <Check size={11} strokeWidth={3} />}
+                    </div>
+                    <span className="sat-layer-label">Snow Depth</span>
+                  </div>
+
+                  <div className="sat-layer-row" onClick={() => handleToggleLayer('iceVelocity')}>
+                    <div className={`sat-custom-checkbox ${layers.iceVelocity ? 'checked' : ''}`}>
+                      {layers.iceVelocity && <Check size={11} strokeWidth={3} />}
+                    </div>
+                    <span className="sat-layer-label">Ice Velocity</span>
+                  </div>
+
+                  <div className="sat-layer-row" onClick={() => handleToggleLayer('elevation')}>
+                    <div className={`sat-custom-checkbox ${layers.elevation ? 'checked' : ''}`}>
+                      {layers.elevation && <Check size={11} strokeWidth={3} />}
+                    </div>
+                    <span className="sat-layer-label">Elevation</span>
                   </div>
                 </div>
 
-                {/* Satellite Terrain Image + SVG Thermal Heatmap */}
+                {/* Satellite Terrain Viewport + Organic Multi-Spectral SVG Overlay */}
                 <div className="vis-map-viewport">
-                  <img src="/antarctic_hero_bg.jpg" alt="Antarctic Cryosphere Terrain" className="vis-terrain-bg-img" />
-                  
-                  <svg className="vis-heatmap-svg" viewBox="0 0 400 240">
+                  <img
+                    src="/antarctic_satellite_hd.jpg"
+                    alt="Antarctic Cryosphere Satellite Imagery"
+                    className="vis-terrain-bg-img"
+                  />
+
+                  {/* Multi-Spectral Contour Radar & Thermal SVG */}
+                  <svg className="sat-contour-svg-overlay" viewBox="0 0 600 360" preserveAspectRatio="none">
                     <defs>
-                      <radialGradient id="thermalRadial" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
-                        <stop offset="25%" stopColor="#f97316" stopOpacity="0.75" />
-                        <stop offset="50%" stopColor="#eab308" stopOpacity="0.65" />
-                        <stop offset="75%" stopColor="#22c55e" stopOpacity="0.55" />
-                        <stop offset="90%" stopColor="#06b6d4" stopOpacity="0.45" />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      <radialGradient id="satSpectralRadial" cx="50%" cy="46%" r="48%">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.95" />
+                        <stop offset="16%" stopColor="#f97316" stopOpacity="0.90" />
+                        <stop offset="32%" stopColor="#eab308" stopOpacity="0.84" />
+                        <stop offset="52%" stopColor="#22c55e" stopOpacity="0.76" />
+                        <stop offset="72%" stopColor="#06b6d4" stopOpacity="0.70" />
+                        <stop offset="88%" stopColor="#2563eb" stopOpacity="0.55" />
+                        <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0" />
                       </radialGradient>
+
+                      <radialGradient id="satNorthThermalFlare" cx="50%" cy="22%" r="30%">
+                        <stop offset="0%" stopColor="#dc2626" stopOpacity="0.98" />
+                        <stop offset="45%" stopColor="#ea580c" stopOpacity="0.88" />
+                        <stop offset="80%" stopColor="#eab308" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                      </radialGradient>
+
+                      <filter id="satGlowSoft" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
                     </defs>
 
-                    <ellipse cx="200" cy="120" rx="90" ry="75" fill="url(#thermalRadial)" />
-                    <ellipse cx="220" cy="100" rx="45" ry="35" fill="#ef4444" opacity="0.6" />
+                    {/* Multi-layer Organic Contour Heatmap */}
+                    <g filter="url(#satGlowSoft)" className="sat-contours-group" opacity={layers.surfaceTemp || layers.snowDepth || layers.iceVelocity || layers.elevation ? 0.95 : 0.2}>
+                      {/* Main organic spectral body */}
+                      <path
+                        d="M 240,48 C 295,35 365,58 395,108 C 425,158 440,225 410,285 C 380,340 310,348 255,325 C 200,300 170,250 178,190 C 185,130 200,60 240,48 Z"
+                        fill="url(#satSpectralRadial)"
+                      />
 
-                    <g className="vis-station-marker">
-                      <circle cx="210" cy="115" r="4.5" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" className="animate-ping" opacity="0.7" />
-                      <circle cx="210" cy="115" r="3" fill="#38bdf8" />
-                      <text x="218" y="118" fill="#ffffff" fontSize="9" fontWeight="bold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                        Maitri Station
-                      </text>
+                      {/* North High-Heat Anomaly Peak */}
+                      <path
+                        d="M 285,55 C 320,40 350,55 360,80 C 370,105 352,125 325,130 C 295,135 272,118 268,96 C 265,78 272,62 285,55 Z"
+                        fill="url(#satNorthThermalFlare)"
+                      />
+
+                      {/* Topographic Contour Vector Outlines */}
+                      <path d="M 225,95 C 275,75 350,85 375,130 C 400,175 395,245 355,280 C 315,315 250,298 215,255 C 180,212 190,135 225,95 Z" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" strokeDasharray="3 3" />
+                      <path d="M 245,130 C 285,115 338,122 355,155 C 372,188 368,230 338,255 C 308,280 265,270 240,240 C 215,210 220,155 245,130 Z" fill="none" stroke="rgba(56,189,248,0.55)" strokeWidth="1.4" />
+                      <path d="M 268,160 C 298,148 330,155 342,180 C 354,205 348,232 325,245 C 302,258 278,248 265,225 C 252,202 256,178 268,160 Z" fill="none" stroke="rgba(250,204,21,0.65)" strokeWidth="1.4" />
                     </g>
+
+                    {/* Streamlines when Ice Velocity is checked */}
+                    {layers.iceVelocity && (
+                      <g className="sat-velocity-vectors" opacity="0.85">
+                        <path d="M 230,140 Q 250,165 280,180" fill="none" stroke="#f43f5e" strokeWidth="2" strokeDasharray="4 2" />
+                        <path d="M 260,120 Q 290,150 320,170" fill="none" stroke="#f43f5e" strokeWidth="2" strokeDasharray="4 2" />
+                        <path d="M 290,105 Q 320,135 350,155" fill="none" stroke="#f43f5e" strokeWidth="2" strokeDasharray="4 2" />
+                      </g>
+                    )}
                   </svg>
 
-                  <div className="vis-temperature-colorbar">
-                    <span className="t-bar-label">-10°C</span>
-                    <div className="t-bar-gradient" />
-                    <span className="t-bar-label">-20°C</span>
-                    <div className="t-bar-gradient" />
-                    <span className="t-bar-label">-30°C</span>
-                    <div className="t-bar-gradient" />
-                    <span className="t-bar-label">-40°C</span>
+                  {/* Station Callout Badge (Maitri / Bharati) */}
+                  <div className="sat-station-callout-marker">
+                    <div className="sat-station-badge-content">
+                      <div className="sat-station-radar-icon">
+                        <Radio size={12} className="text-cyan" />
+                        <span className="sat-ping-radar-glow" />
+                      </div>
+                      <span className="sat-station-title-txt">{stationDisplayName} Station</span>
+                    </div>
+                    <div className="sat-station-target-pin" />
                   </div>
 
-                  <div className="vis-coords-badge">
-                    <Compass size={11} className="text-cyan" />
-                    <span>{stationCoords}</span>
-                    <ChevronRight size={11} />
+                  {/* Right-Side Vertical Thermal Colorbar Legend */}
+                  <div className="sat-legend-capsule">
+                    <div className="sat-legend-bar-track">
+                      <div
+                        className="sat-legend-bar-gradient"
+                        style={{
+                          background: layers.surfaceTemp
+                            ? 'linear-gradient(to bottom, #ef4444 0%, #f97316 20%, #eab308 45%, #22c55e 65%, #06b6d4 85%, #1d4ed8 100%)'
+                            : layers.snowDepth
+                            ? 'linear-gradient(to bottom, #38bdf8 0%, #0284c7 35%, #10b981 70%, #047857 100%)'
+                            : 'linear-gradient(to bottom, #f43f5e 0%, #fb923c 35%, #facc15 70%, #38bdf8 100%)'
+                        }}
+                      />
+                    </div>
+                    <div className="sat-legend-ticks">
+                      {layers.surfaceTemp ? (
+                        <>
+                          <span className="sat-tick-item"><span className="tick-dash" />-10°C</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />-20°C</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />-30°C</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />-40°C</span>
+                        </>
+                      ) : layers.snowDepth ? (
+                        <>
+                          <span className="sat-tick-item"><span className="tick-dash" />4.0 m</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />3.0 m</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />2.0 m</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />1.0 m</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="sat-tick-item"><span className="tick-dash" />240 m/a</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />180 m/a</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />120 m/a</span>
+                          <span className="sat-tick-item"><span className="tick-dash" />60 m/a</span>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="vis-bottom-actions">
-                    <button 
-                      type="button" 
-                      className="vis-action-btn"
-                      onClick={() => openDrillDown({
-                        title: 'Satellite Thermal Cryosphere Twin',
-                        type: 'DRILL_DOWN',
-                        category: 'SATELLITE',
-                        currentValue: '-18.4°C',
-                        unit: 'Surface Temp',
-                        status: 'NORMAL',
-                        interpretation: 'CryoSat-2 and NISAR radar altimetry overlay showing ice shelf equilibrium.',
-                        station: 'Maitri Station'
-                      })}
+                  {/* Bottom-Left Coordinates Reticle HUD */}
+                  <div className="sat-coords-hud-badge" onClick={handleViewAnalysis} title="View GPS Cryosphere Positioning">
+                    <div className="sat-crosshair-icon-wrap">
+                      <Compass size={14} className="text-cyan" />
+                    </div>
+                    <div className="sat-coords-text-col">
+                      <span className="sat-coords-val">{stationCoords}</span>
+                      <div className="sat-coords-underline-glow" />
+                    </div>
+                    <ChevronRight size={13} className="text-cyan sat-hud-arrow" />
+                  </div>
+
+                  {/* Bottom-Right Controls: 3D View & Fullscreen Action Buttons */}
+                  <div className="sat-bottom-controls-group">
+                    <button
+                      type="button"
+                      className={`sat-btn-3d ${is3DView ? 'active' : ''}`}
+                      onClick={() => setIs3DView(!is3DView)}
+                      title="Toggle 3D Elevation & Perspective View"
                     >
-                      <Box size={11} />
+                      <Box size={13} className="text-cyan" />
                       <span>3D View</span>
                     </button>
-                    <button 
-                      type="button" 
-                      className="vis-action-btn icon-only"
-                      onClick={() => openDrillDown({
-                        title: 'Antarctic Cryosphere Thermal Map',
-                        type: 'DRILL_DOWN',
-                        category: 'SATELLITE',
-                        currentValue: '-18.4°C',
-                        unit: 'Average Surface Temp',
-                        status: 'NORMAL',
-                        interpretation: 'Full scale satellite thermal imaging viewport with active layer filtering.',
-                        station: 'Maitri Station'
-                      })}
+
+                    <button
+                      type="button"
+                      className="sat-btn-fullscreen"
+                      onClick={handleViewAnalysis}
+                      title="Open Fullscreen Detailed Satellite Analysis"
                     >
-                      <Maximize2 size={11} />
+                      <Maximize2 size={13} />
                     </button>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -1629,21 +1637,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
 
               <div className="equip-items-list">
                 {equipmentStatusList.map((eq) => (
-                  <div 
-                    key={eq.id} 
-                    className="equip-row-item interactive-card"
-                    onClick={() => openDrillDown({
-                      title: eq.name,
-                      type: 'DRILL_DOWN',
-                      category: 'EQUIPMENT',
-                      currentValue: eq.status,
-                      unit: '',
-                      status: eq.status === 'Online' ? 'NORMAL' : 'WARNING',
-                      interpretation: `Subsystem classification: ${eq.type}. Equipment operational health rating: ${eq.health}%.`,
-                      recommendation: `Last calibration timestamp: ${eq.lastUpdated}. Transmitting nominal data packets.`,
-                      station: 'Maitri Station'
-                    })}
-                  >
+                  <div key={eq.id} className="equip-row-item">
                     <div className="equip-name-col">
                       <Cpu size={12} className="text-cyan" />
                       <span className="equip-name-txt">{eq.name}</span>
@@ -1675,20 +1669,7 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                   {maitriLiveFeed.map((item) => {
                     const IconComp = item.icon;
                     return (
-                      <div 
-                        key={item.id} 
-                        className="feed-row-item interactive-card"
-                        onClick={() => openDrillDown({
-                          title: item.title,
-                          type: 'DRILL_DOWN',
-                          category: 'FEED_EVENT',
-                          currentValue: item.time,
-                          status: 'NORMAL',
-                          interpretation: item.desc,
-                          recommendation: 'Log stored in telemetry database repository.',
-                          station: 'Maitri Station'
-                        })}
-                      >
+                      <div key={item.id} className="feed-row-item">
                         <div className="feed-icon-circle">
                           <IconComp size={11} className="text-cyan" />
                         </div>
@@ -1711,20 +1692,6 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                     <span className="ai-title-txt">AI Research Assistant</span>
                     <span className="ai-beta-tag">Beta</span>
                   </div>
-                  <Maximize2 
-                    size={12} 
-                    className="text-dim cursor-pointer hover:text-cyan" 
-                    title="Expand AI Deep Dive Intelligence"
-                    onClick={() => openDrillDown({
-                      title: `${stationDisplayName} AI Research Intelligence`,
-                      type: 'DRILL_DOWN',
-                      category: 'RESEARCH_AI',
-                      currentValue: 'ACTIVE',
-                      interpretation: aiMessages[aiMessages.length - 1]?.text || 'AI Cryosphere Telemetry Synthesis Active.',
-                      recommendation: 'Model performing continuous Z-score variance tracking and Pearson correlations.',
-                      station: stationDisplayName + ' Station'
-                    })}
-                  />
                 </div>
 
                 <div className="ai-messages-scroll-area">
@@ -1746,6 +1713,26 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
                             <FileText size={11} /> View Full 24-Hour Operational Report
                           </button>
                         )}
+                        {msg.hasAnalysisAction && (
+                          <button 
+                            type="button"
+                            className="ai-view-report-inline-btn"
+                            style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
+                            onClick={() => setIsAnalysisModalOpen(true)}
+                          >
+                            <Layers size={11} /> Open Detailed Satellite Analysis
+                          </button>
+                        )}
+                        {msg.hasCompareAction && (
+                          <button 
+                            type="button"
+                            className="ai-view-report-inline-btn"
+                            style={{ background: 'rgba(139, 92, 246, 0.15)', borderColor: 'rgba(139, 92, 246, 0.4)', color: '#c084fc' }}
+                            onClick={() => setIsComparisonModalOpen(true)}
+                          >
+                            <GitCompare size={11} /> Open 5-Year Historical Comparison
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1758,10 +1745,10 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
 
                 {/* Quick Action Buttons */}
                 <div className="ai-quick-actions-row">
-                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('View detailed analysis')}>
+                  <button type="button" className="ai-action-btn" onClick={handleViewAnalysis}>
                     View Analysis
                   </button>
-                  <button type="button" className="ai-action-btn" onClick={() => handleSendAiMessage('Compare with past data')}>
+                  <button type="button" className="ai-action-btn" onClick={handleCompareWithPast}>
                     Compare with Past
                   </button>
                   <button 
@@ -1874,6 +1861,22 @@ export default function ResearchView({ selectedStation = 'station-maitri', onSel
         selectedStation={selectedStation === 'all-stations' && isIndiaOperator ? 'all-stations' : effectiveStation}
         isLoading={isGeneratingReport}
         onRegenerate={handleGenerateSummaryReport}
+      />
+
+      {/* Detailed Satellite Cryosphere Analysis Modal */}
+      <ResearchAnalysisModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => setIsAnalysisModalOpen(false)}
+        selectedStation={effectiveStation}
+        onSelectStation={onSelectStation}
+      />
+
+      {/* 5-Year Historical Cryosphere & Climate Comparison Modal */}
+      <HistoricalComparisonModal
+        isOpen={isComparisonModalOpen}
+        onClose={() => setIsComparisonModalOpen(false)}
+        selectedStation={effectiveStation}
+        onSelectStation={onSelectStation}
       />
 
     </div>

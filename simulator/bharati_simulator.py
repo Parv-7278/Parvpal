@@ -178,11 +178,13 @@ class BharatiSimulator:
             "generator_status": self.generator_status,
             "wind_speed": round(self.wind_speed, 1),
             "water_level": round(self.water_level, 1),
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
             "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
         }
 
     def _build_critical_alert(self):
         """Construct a high-priority emergency alert payload."""
+        now_utc = datetime.now(timezone.utc)
         return {
             "station_id": STATION_ID,
             "priority": "CRITICAL",
@@ -191,7 +193,8 @@ class BharatiSimulator:
             "sensor_key": "generator_temperature",
             "sensor_value": self.generator_temperature,
             "threshold_value": 90.0,
-            "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+            "triggered_at": now_utc.isoformat(),
+            "timestamp": now_utc.strftime("%H:%M:%S UTC")
         }
 
 

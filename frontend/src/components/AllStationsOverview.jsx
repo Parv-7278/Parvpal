@@ -10,13 +10,18 @@ import {
   ArrowRight,
   Compass,
   Thermometer,
-  Wind
+  Wind,
+  Clock
 } from 'lucide-react';
 import { STATIONS_DATA } from '../data/stationsData';
+import { useStationClock } from '../utils/timeUtils';
 
 export default function AllStationsOverview({ onSelectStation }) {
   const maitri = STATIONS_DATA['station-maitri'];
   const bharati = STATIONS_DATA['station-bharati'];
+
+  const maitriClock = useStationClock(maitri.timezone || 'UTC');
+  const bharatiClock = useStationClock(bharati.timezone || 'Antarctica/Mawson');
 
   return (
     <div className="tab-page-container all-stations-container">
@@ -36,9 +41,14 @@ export default function AllStationsOverview({ onSelectStation }) {
         <div className="station-overview-card">
           <div className="station-card-top-bar">
             <div className="station-title-cluster">
-              <span className="station-card-code">STATION #1</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="station-card-code">STATION #1</span>
+                <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={10} /> Local: <strong className="mono-num">{maitriClock.timeStrWithSeconds}</strong> ({maitri.timezone_label || 'UTC+0'})
+                </span>
+              </div>
               <h3 className="station-card-name">Maitri Research Station</h3>
-              <span className="station-card-region">{maitri.region} • Est. {maitri.commissioned_year}</span>
+              <span className="station-card-region">{maitri.region} • Est. {maitri.commissioned_year || maitri.established}</span>
             </div>
             <div className="station-health-badge health-nominal">
               <span className="health-score-big">{maitri.health.score}</span>
@@ -111,9 +121,14 @@ export default function AllStationsOverview({ onSelectStation }) {
         <div className="station-overview-card">
           <div className="station-card-top-bar">
             <div className="station-title-cluster">
-              <span className="station-card-code">STATION #2</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="station-card-code">STATION #2</span>
+                <span style={{ fontSize: '11px', padding: '2px 7px', background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={10} /> Local: <strong className="mono-num">{bharatiClock.timeStrWithSeconds}</strong> ({bharati.timezone_label || 'UTC+5'})
+                </span>
+              </div>
               <h3 className="station-card-name">Bharati Research Station</h3>
-              <span className="station-card-region">{bharati.region} • Est. {bharati.commissioned_year}</span>
+              <span className="station-card-region">{bharati.region} • Est. {bharati.commissioned_year || bharati.established}</span>
             </div>
             <div className="station-health-badge health-optimal">
               <span className="health-score-big">{bharati.health.score}</span>

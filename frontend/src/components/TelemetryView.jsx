@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useTelemetry } from '../context/TelemetryContext';
 import { STATIONS_DATA } from '../data/stationsData';
+import { formatStationTime } from '../utils/timeUtils';
 
 export default function TelemetryView({ selectedStation }) {
   const stationId = selectedStation === 'all-stations' ? 'station-maitri' : selectedStation;
@@ -44,7 +45,7 @@ export default function TelemetryView({ selectedStation }) {
     if (!isStreaming) return;
     const interval = setInterval(() => {
       const now = new Date();
-      const timeTag = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const timeTag = formatStationTime(now, station.timezone);
       const currentGenTemp = liveTelemetry?.generator_temperature || (70.0 + (Math.random() * 0.8 - 0.4));
       
       setStreamData(prev => {

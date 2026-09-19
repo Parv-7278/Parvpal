@@ -2,7 +2,11 @@ import logging
 import math
 import random
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 from typing import Dict, Any, List, Optional, Tuple
 
 from config import settings
@@ -544,31 +548,58 @@ class AIAnalystService:
             f"Cryospheric sensor arrays and microgrid systems recorded continuous telemetry. "
         )
 
-        if top_anomalies:
-            summary += f"Notable anomalies were identified in {', '.join(a['label'] for a in top_anomalies)} requiring proactive engineering oversight. "
+        is_bharati = "bharati" in station_name.lower()
+        if analysis_type in ["energy", "energy_env"] or (user_query and any(k in user_query.lower() for k in ["energy", "power", "generator", "bess", "battery", "microgrid"])):
+            if is_bharati:
+                summary = (
+                    f"Bharati microgrid generation (+185.0 kW) operates at optimal thermal equilibrium, sustaining an average load of 148.0 kW with +37.0 kW net surplus. "
+                    f"CHP Generators 1 & 2 deliver 137.0 kW baseload with bifacial solar farm contributing 32.0 kW (94% efficiency). "
+                    f"Primary load drivers include the ISRO satellite ground station radome (50 kW / 34%) and seawater reverse osmosis desalination (24 kW). "
+                    f"BESS storage reserves remain solid at 91.0% (5,460 kWh) with 68 days of arctic diesel stock."
+                )
+                recommendations = [
+                    "Maintain baseline seawater desalination trace heating at nominal 24 kW load.",
+                    "Schedule bifacial solar panel snow-clearing sweep if coastal mist reduces irradiance by >15%.",
+                    "Verify CHP heat-recovery glycol thermal loop balancing with living habitat HVAC.",
+                    "Keep BESS peak-shaving buffer armed for satellite tracking pass bursts."
+                ]
+            else:
+                summary = (
+                    f"Maitri microgrid generation (+132.0 kW) comfortably covers total scientific and base habitation draw (+105.0 kW) with +27.0 kW net surplus. "
+                    f"Diesel Generator G-02 core temperature indicates mild thermal elevation (78.4°C vs 85.0°C warning threshold) under 76% load. "
+                    f"Lake Priyadarshini water intake trace heating draws 8.0 kW nominal against sub-surface freezing. "
+                    f"BESS storage holds 74.0% charge (2,960 kWh, 2.8 days reserve) with 50,200 L of fuel reserves (43 days runtime)."
+                )
+                recommendations = [
+                    "Authorize microgrid load balancing protocols on Generator G-02 during high katabatic wind intervals.",
+                    "Verify Priyadarshini Lake intake anti-freeze trace heating circuit continuity (8 kW).",
+                    "Rotate baseload dispatch to Generator G-01 to allow G-02 stator thermal dissipation.",
+                    "Preserve BESS storage reserve above 70% threshold prior to forecast winter blizzard."
+                ]
         else:
-            summary += "All primary environmental transducers and energy reserves are operating within standard Gaussian baseline tolerances. "
+            if top_anomalies:
+                summary += f"Notable anomalies were identified in {', '.join(a['label'] for a in top_anomalies)} requiring proactive engineering oversight. "
+            else:
+                summary += "All primary environmental transducers and energy reserves are operating within standard Gaussian baseline tolerances. "
 
-        if correlations:
-            strong_corr = [c for c in correlations if "strong" in c.get("strength", "").lower()]
-            if strong_corr:
-                summary += f"Strong empirical coupling observed in {strong_corr[0]['pair']} (r={strong_corr[0]['r_value']:+.2f}). "
+            if correlations:
+                strong_corr = [c for c in correlations if "strong" in c.get("strength", "").lower()]
+                if strong_corr:
+                    summary += f"Strong empirical coupling observed in {strong_corr[0]['pair']} (r={strong_corr[0]['r_value']:+.2f}). "
 
-        recommendations = [
-            f"Maintain automated trace-heating circuits on exterior fuel lines across {station_name}.",
-            "Verify secondary diesel generator auto-crank sequencing prior to next forecast katabatic surge.",
-            "Continue high-frequency seismological logging at 1.5 Hz on borehole sensors.",
-            "Schedule BESS cell balancing cycle if discharge rate exceeds 2.5%/day."
-        ]
+            recommendations = [
+                f"Maintain automated trace-heating circuits on exterior fuel lines across {station_name}.",
+                "Verify secondary diesel generator auto-crank sequencing prior to next forecast katabatic surge.",
+                "Continue high-frequency seismological logging at 1.5 Hz on borehole sensors.",
+                "Schedule BESS cell balancing cycle if discharge rate exceeds 2.5%/day."
+            ]
 
-        if user_query:
+        if user_query and analysis_type not in ["energy", "energy_env"]:
             q_lower = user_query.lower()
             if "change" in q_lower or "what changed" in q_lower:
                 summary = f"Key Telemetry Changes ({time_range}): " + "; ".join(f"{f['label']} changed {f['change_percent']:+.1f}% ({f['trend']})" for f in findings[:3]) + "."
             elif "anomaly" in q_lower or "strongest" in q_lower:
                 summary = f"Anomaly Assessment: {anomalies[0]['explanation']}" if anomalies else "No statistical anomalies detected."
-            elif "energy" in q_lower or "power" in q_lower:
-                summary = f"Energy Diagnostic: Microgrid power draw averages {findings[1]['current_value'] if len(findings)>1 else '105 kW'} with generator temperature operating in {gen_status} mode."
 
         return {
             "summary": summary,
@@ -742,10 +773,31 @@ class AIAnalystService:
         station_name = "MAITRI" if is_maitri else "BHARATI"
         full_station_name = "Maitri Research Station (Schirmacher Oasis)" if is_maitri else "Bharati Research Station (Larsemann Hills)"
 
-        t_24h = now - timedelta(hours=24)
-        t_48h = now - timedelta(hours=48)
-        reporting_period = f"{t_24h.strftime('%d %b %Y, %H:%M')} → {now.strftime('%d %b %Y, %H:%M')} UTC"
-        comparison_period = f"{t_48h.strftime('%d %b %Y, %H:%M')} → {t_24h.strftime('%d %b %Y, %H:%M')} UTC"
+        raw_st_data = StationService.get_raw_station_data(norm_st)
+        tz_name = raw_st_data.get("timezone", "UTC" if is_maitri else "Antarctica/Mawson")
+        tz_label = raw_st_data.get("timezone_label", "UTC+0" if is_maitri else "UTC+5")
+
+        try:
+            if ZoneInfo:
+                st_tz = ZoneInfo(tz_name)
+                now_utc = now.replace(tzinfo=timezone.utc)
+                now_st = now_utc.astimezone(st_tz)
+                t_24h_st = (now_utc - timedelta(hours=24)).astimezone(st_tz)
+                t_48h_st = (now_utc - timedelta(hours=48)).astimezone(st_tz)
+                reporting_period = f"{t_24h_st.strftime('%d %b %Y, %H:%M')} → {now_st.strftime('%d %b %Y, %H:%M')} {tz_label}"
+                comparison_period = f"{t_48h_st.strftime('%d %b %Y, %H:%M')} → {t_24h_st.strftime('%d %b %Y, %H:%M')} {tz_label}"
+            else:
+                offset_hrs = 0 if is_maitri else 5
+                now_st = now + timedelta(hours=offset_hrs)
+                t_24h_st = now_st - timedelta(hours=24)
+                t_48h_st = now_st - timedelta(hours=48)
+                reporting_period = f"{t_24h_st.strftime('%d %b %Y, %H:%M')} → {now_st.strftime('%d %b %Y, %H:%M')} {tz_label}"
+                comparison_period = f"{t_48h_st.strftime('%d %b %Y, %H:%M')} → {t_24h_st.strftime('%d %b %Y, %H:%M')} {tz_label}"
+        except Exception:
+            t_24h = now - timedelta(hours=24)
+            t_48h = now - timedelta(hours=48)
+            reporting_period = f"{t_24h.strftime('%d %b %Y, %H:%M')} → {now.strftime('%d %b %Y, %H:%M')} {tz_label}"
+            comparison_period = f"{t_48h.strftime('%d %b %Y, %H:%M')} → {t_24h.strftime('%d %b %Y, %H:%M')} {tz_label}"
 
         # ---------------------------------------------------------------------
         # 1. STATION HEALTH CALCULATION (Current vs Previous 24h)

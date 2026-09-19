@@ -20,6 +20,8 @@ import {
   Clock
 } from 'lucide-react';
 import { STATIONS_DATA } from '../data/stationsData';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
+import AIPredictionIndicator from './AIPredictionIndicator';
 
 export default function LogisticsView({ selectedStation }) {
   const stationId = selectedStation === 'all-stations' ? 'station-maitri' : selectedStation;
@@ -191,51 +193,126 @@ export default function LogisticsView({ selectedStation }) {
         </div>
       </div>
 
+      {/* AI Predictive Intelligence Section Indicator */}
+      <AIPredictionIndicator category="logistics" />
+
       {/* Top Summary Metric Strip */}
       <div className="logistics-kpi-strip">
-        <div className="kpi-box">
-          <div className="kpi-top">
-            <Fuel size={16} className="text-amber" />
-            <span className="kpi-label">TOTAL BULK FUEL</span>
+        <ExpandableTelemetryCard
+          title="Total Bulk Fuel Reserve"
+          category="LOGISTICS INVENTORY"
+          value={isMaitri ? '50,200 L' : '78,500 L'}
+          status={isMaitri ? 'warning' : 'nominal'}
+          icon={Fuel}
+          color="#f59e0b"
+          subtext={`${isMaitri ? '43 Days' : '71 Days'} Autonomy Remaining`}
+          details={[
+            { label: 'Current Volume', value: isMaitri ? '50,200 L' : '78,500 L', color: '#f59e0b' },
+            { label: 'Max Capacity', value: isMaitri ? '77,000 L' : '105,000 L', color: '#f8fafc' },
+            { label: 'Burn Rate', value: isMaitri ? '1,167 L / day' : '1,105 L / day', color: '#38bdf8' },
+            { label: 'Tank Heating', value: '4 / 4 Glycol Loops Active', color: '#10b981' },
+          ]}
+          interpretation="Polar diesel fuel reserve is maintained in active trace-heated vacuum-insulated bulk tanks."
+          stationName={station.name}
+        >
+          <div className="kpi-box">
+            <div className="kpi-top">
+              <Fuel size={16} className="text-amber" />
+              <span className="kpi-label">TOTAL BULK FUEL</span>
+            </div>
+            <div className="kpi-val mono-num">{isMaitri ? '50,200 L' : '78,500 L'}</div>
+            <div className="kpi-subtext">
+              <span className="text-amber font-bold">{isMaitri ? '43 Days' : '71 Days'}</span> autonomy remaining
+            </div>
           </div>
-          <div className="kpi-val mono-num">{isMaitri ? '50,200 L' : '78,500 L'}</div>
-          <div className="kpi-subtext">
-            <span className="text-amber font-bold">{isMaitri ? '43 Days' : '71 Days'}</span> autonomy remaining
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="kpi-box">
-          <div className="kpi-top">
-            <Droplets size={16} className="text-cyan" />
-            <span className="kpi-label">POTABLE WATER BUFFER</span>
+        <ExpandableTelemetryCard
+          title="Potable Water Buffer"
+          category="LIFE SUPPORT BUFFER"
+          value={isMaitri ? '14,800 L' : '28,400 L'}
+          status="nominal"
+          icon={Droplets}
+          color="#06b6d4"
+          subtext={isMaitri ? 'Lake Priyadarshini heated intake active' : 'RO Desalination plant generating 950 L/d'}
+          details={[
+            { label: 'Potable Buffer', value: isMaitri ? '14,800 L' : '28,400 L', color: '#06b6d4' },
+            { label: 'Daily Yield', value: isMaitri ? '520 L / day pump' : '950 L / day RO', color: '#10b981' },
+            { label: 'Daily Usage', value: isMaitri ? '460 L / day' : '490 L / day', color: '#38bdf8' },
+            { label: 'Purity Level', value: '0.18 NTU (Optimal)', color: '#10b981' },
+          ]}
+          interpretation="Water buffer sustains drinking, galley, and fire-suppression reserve margins."
+          stationName={station.name}
+        >
+          <div className="kpi-box">
+            <div className="kpi-top">
+              <Droplets size={16} className="text-cyan" />
+              <span className="kpi-label">POTABLE WATER BUFFER</span>
+            </div>
+            <div className="kpi-val mono-num">{isMaitri ? '14,800 L' : '28,400 L'}</div>
+            <div className="kpi-subtext">
+              {isMaitri ? 'Lake Priyadarshini heated line active' : 'RO Desalination plant generating 950 L/d'}
+            </div>
           </div>
-          <div className="kpi-val mono-num">{isMaitri ? '14,800 L' : '28,400 L'}</div>
-          <div className="kpi-subtext">
-            {isMaitri ? 'Lake Priyadarshini heated line active' : 'RO Desalination plant generating 950 L/d'}
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="kpi-box">
-          <div className="kpi-top">
-            <Utensils size={16} className="text-emerald" />
-            <span className="kpi-label">RATIONS & PROVISIONS</span>
+        <ExpandableTelemetryCard
+          title="Rations & Provisions Cache"
+          category="NUTRITION LOGISTICS"
+          value={isMaitri ? '3,250 kg' : '6,120 kg'}
+          status="nominal"
+          icon={Utensils}
+          color="#10b981"
+          subtext={`${isMaitri ? '67 Days' : '110 Days'} Caloric Reserve`}
+          details={[
+            { label: 'Current Inventory', value: isMaitri ? '3,250 kg' : '6,120 kg', color: '#10b981' },
+            { label: 'Caloric Ratio', value: '3,600 kcal/person/day', color: '#f8fafc' },
+            { label: 'Hydroponics Yield', value: '4.2 kg / week fresh', color: '#38bdf8' },
+            { label: 'Freezer Temp', value: '-22.4°C Nominal', color: '#10b981' },
+          ]}
+          interpretation="Balanced multi-month nutritional inventory including emergency survival ration packs."
+          stationName={station.name}
+        >
+          <div className="kpi-box">
+            <div className="kpi-top">
+              <Utensils size={16} className="text-emerald" />
+              <span className="kpi-label">RATIONS & PROVISIONS</span>
+            </div>
+            <div className="kpi-val mono-num">{isMaitri ? '3,250 kg' : '6,120 kg'}</div>
+            <div className="kpi-subtext">
+              <span className="text-emerald font-bold">{isMaitri ? '67 Days' : '110 Days'}</span> caloric reserve
+            </div>
           </div>
-          <div className="kpi-val mono-num">{isMaitri ? '3,250 kg' : '6,120 kg'}</div>
-          <div className="kpi-subtext">
-            <span className="text-emerald font-bold">{isMaitri ? '67 Days' : '110 Days'}</span> caloric reserve
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
-        <div className="kpi-box">
-          <div className="kpi-top">
-            <Ship size={16} className="text-blue" />
-            <span className="kpi-label">NEXT RESUPPLY SHIP</span>
+        <ExpandableTelemetryCard
+          title="Next Resupply Expedition"
+          category="SUPPLY CHAIN TELEMETRY"
+          value={isMaitri ? '38 Days' : '26 Days'}
+          status="nominal"
+          icon={Ship}
+          color="#38bdf8"
+          subtext="MV Vasiliy Golovnin in Southern Ocean Transit"
+          details={[
+            { label: 'Vessel Name', value: 'MV Vasiliy Golovnin', color: '#38bdf8' },
+            { label: 'Coordinates', value: '58°12′S, 32°45′E', color: '#f8fafc' },
+            { label: 'Cargo Payload', value: '650,000 L Fuel + 24 Containers', color: '#10b981' },
+            { label: 'Helicopter Air-Lift', value: 'Kamov Ka-32 Ready', color: '#38bdf8' },
+          ]}
+          interpretation="Scheduled 44th Indian Antarctic Expedition annual relief voyage is progressing on course."
+          stationName={station.name}
+        >
+          <div className="kpi-box">
+            <div className="kpi-top">
+              <Ship size={16} className="text-blue" />
+              <span className="kpi-label">NEXT RESUPPLY SHIP</span>
+            </div>
+            <div className="kpi-val mono-num">{isMaitri ? '38 Days' : '26 Days'}</div>
+            <div className="kpi-subtext">
+              MV Vasiliy Golovnin in Southern Ocean
+            </div>
           </div>
-          <div className="kpi-val mono-num">{isMaitri ? '38 Days' : '26 Days'}</div>
-          <div className="kpi-subtext">
-            MV Vasiliy Golovnin in Southern Ocean
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
       </div>
 
       {/* Main Grid: Inventory Cards (Left) & Fuel Telemetry / Voyage Manifest (Right) */}
@@ -251,47 +328,67 @@ export default function LogisticsView({ selectedStation }) {
             {inventoryCards.map((card) => {
               const IconComp = card.icon;
               return (
-                <div key={card.id} className="inventory-detail-card polaris-card">
-                  <div className="inv-card-header">
-                    <div className="inv-title-wrap">
-                      <div className="inv-icon-pill" style={{ borderColor: card.color }}>
-                        <IconComp size={18} style={{ color: card.color }} />
+                <ExpandableTelemetryCard
+                  key={card.id}
+                  title={card.title}
+                  category={card.category}
+                  value={card.current}
+                  percent={card.percent}
+                  status={card.health.toLowerCase() === 'optimal' ? 'nominal' : 'warning'}
+                  icon={IconComp}
+                  color={card.color}
+                  subtext={`Remaining: ${card.daysLeft} Days • Capacity: ${card.current} / ${card.capacity}`}
+                  details={[
+                    { label: 'Stock Level', value: card.current, color: card.color },
+                    { label: 'Max Capacity', value: card.capacity, color: '#f8fafc' },
+                    { label: 'Burn Rate', value: card.burnRate, color: '#38bdf8' },
+                    ...(card.details || [])
+                  ]}
+                  interpretation={card.healthDesc}
+                  stationName={station.name}
+                >
+                  <div className="inventory-detail-card polaris-card">
+                    <div className="inv-card-header">
+                      <div className="inv-title-wrap">
+                        <div className="inv-icon-pill" style={{ borderColor: card.color }}>
+                          <IconComp size={18} style={{ color: card.color }} />
+                        </div>
+                        <div>
+                          <span className="inv-cat-label">{card.category}</span>
+                          <h4 className="inv-title">{card.title}</h4>
+                        </div>
                       </div>
-                      <div>
-                        <span className="inv-cat-label">{card.category}</span>
-                        <h4 className="inv-title">{card.title}</h4>
+                      <div className="inv-days-badge" style={{ borderColor: card.color }}>
+                        <span className="inv-days-num mono-num">{card.daysLeft}</span>
+                        <span className="inv-days-txt">DAYS LEFT</span>
                       </div>
                     </div>
-                    <div className="inv-days-badge" style={{ borderColor: card.color }}>
-                      <span className="inv-days-num mono-num">{card.daysLeft}</span>
-                      <span className="inv-days-txt">DAYS LEFT</span>
+
+                    <p className="inv-desc">{card.healthDesc}</p>
+
+                    <div className="inv-progress-bar-wrap">
+                      <div className="inv-bar-labels">
+                        <span className="inv-curr-amt mono-num">Stock: {card.current} / {card.capacity}</span>
+                        <span className="inv-percent-txt mono-num" style={{ color: card.color }}>{card.percent}% Capacity</span>
+                      </div>
+                      <div className="inv-progress-track">
+                        <div
+                          className="inv-progress-fill"
+                          style={{ width: `${card.percent}%`, backgroundColor: card.color }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="inv-details-grid">
+                      {card.details.map((d, i) => (
+                        <div key={i} className="inv-detail-chip">
+                          <span className="chip-label">{d.label}:</span>
+                          <span className="chip-val">{d.value}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
-                  <p className="inv-desc">{card.healthDesc}</p>
-
-                  <div className="inv-progress-bar-wrap">
-                    <div className="inv-bar-labels">
-                      <span className="inv-curr-amt mono-num">Stock: {card.current} / {card.capacity}</span>
-                      <span className="inv-percent-txt mono-num" style={{ color: card.color }}>{card.percent}% Capacity</span>
-                    </div>
-                    <div className="inv-progress-track">
-                      <div
-                        className="inv-progress-fill"
-                        style={{ width: `${card.percent}%`, backgroundColor: card.color }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="inv-details-grid">
-                    {card.details.map((d, i) => (
-                      <div key={i} className="inv-detail-chip">
-                        <span className="chip-label">{d.label}:</span>
-                        <span className="chip-val">{d.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                </ExpandableTelemetryCard>
               );
             })}
           </div>
@@ -311,32 +408,53 @@ export default function LogisticsView({ selectedStation }) {
 
             <div className="tanks-grid">
               {fuelTanks.map((tank) => (
-                <div key={tank.id} className="tank-card">
-                  <div className="tank-top">
-                    <span className="tank-code">{tank.id}</span>
-                    <span className="tank-status-pill status-nominal">{tank.status}</span>
-                  </div>
-                  <h5 className="tank-name">{tank.name}</h5>
-                  <div className="tank-level-wrap">
-                    <div className="tank-level-val mono-num">
-                      {tank.current.toLocaleString()} L
-                      <span className="tank-cap"> / {tank.capacity.toLocaleString()} L</span>
+                <ExpandableTelemetryCard
+                  key={tank.id}
+                  title={`${tank.id} - ${tank.name}`}
+                  category="CONTAINMENT TANK SCADA"
+                  value={`${tank.current.toLocaleString()} L`}
+                  percent={tank.percent}
+                  status={tank.status.toLowerCase() === 'optimal' || tank.status.toLowerCase() === 'nominal' ? 'nominal' : 'warning'}
+                  icon={Fuel}
+                  color={tank.percent < 70 ? '#f59e0b' : '#10b981'}
+                  subtext={`Tank Capacity: ${tank.capacity.toLocaleString()} L • Core Temp: ${tank.temp}°C`}
+                  details={[
+                    { label: 'Current Level', value: `${tank.current.toLocaleString()} L`, color: tank.percent < 70 ? '#f59e0b' : '#10b981' },
+                    { label: 'Tank Capacity', value: `${tank.capacity.toLocaleString()} L`, color: '#f8fafc' },
+                    { label: 'Core Temp', value: `${tank.temp}°C`, color: '#38bdf8' },
+                    { label: 'Glycol Trace Jacket', value: tank.heating, color: '#10b981' },
+                    { label: 'Containment Sensor', value: 'Zero Leakage (Optimal)', color: '#10b981' },
+                  ]}
+                  interpretation="Double-walled Arctic containment tank equipped with differential pressure level sensors and temperature probes."
+                  stationName={station.name}
+                >
+                  <div className="tank-card">
+                    <div className="tank-top">
+                      <span className="tank-code">{tank.id}</span>
+                      <span className="tank-status-pill status-nominal">{tank.status}</span>
                     </div>
-                    <div className="tank-progress-track">
-                      <div
-                        className="tank-progress-fill"
-                        style={{ width: `${tank.percent}%`, backgroundColor: tank.percent < 70 ? '#f59e0b' : '#10b981' }}
-                      />
+                    <h5 className="tank-name">{tank.name}</h5>
+                    <div className="tank-level-wrap">
+                      <div className="tank-level-val mono-num">
+                        {tank.current.toLocaleString()} L
+                        <span className="tank-cap"> / {tank.capacity.toLocaleString()} L</span>
+                      </div>
+                      <div className="tank-progress-track">
+                        <div
+                          className="tank-progress-fill"
+                          style={{ width: `${tank.percent}%`, backgroundColor: tank.percent < 70 ? '#f59e0b' : '#10b981' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="tank-meta-row">
+                      <span className="tank-temp">
+                        <Thermometer size={12} className="text-cyan" />
+                        Core Temp: {tank.temp}°C
+                      </span>
+                      <span className="tank-heat">Jacket: {tank.heating}</span>
                     </div>
                   </div>
-                  <div className="tank-meta-row">
-                    <span className="tank-temp">
-                      <Thermometer size={12} className="text-cyan" />
-                      Core Temp: {tank.temp}°C
-                    </span>
-                    <span className="tank-heat">Jacket: {tank.heating}</span>
-                  </div>
-                </div>
+                </ExpandableTelemetryCard>
               ))}
             </div>
           </div>

@@ -36,6 +36,8 @@ RAW_STATIONS_DATA: Dict[str, Dict[str, Any]] = {
         "statusColor": "#10b981",
         "altitude": "117 m above sea level",
         "environmentType": "Inland Rocky Moraine (Lake Priyadarshini Oasis)",
+        "timezone": "UTC",
+        "timezone_label": "UTC+0",
         "heroImage": "/stations/maitri.jpg",
         "health": {
             "total": 87,
@@ -162,6 +164,8 @@ RAW_STATIONS_DATA: Dict[str, Dict[str, Any]] = {
         "statusColor": "#10b981",
         "altitude": "35 m above sea level",
         "environmentType": "Coastal Antarctic Promontory (Prydz Bay Maritime)",
+        "timezone": "Antarctica/Mawson",
+        "timezone_label": "UTC+5",
         "heroImage": "/stations/bharati.jpg",
         "health": {
             "total": 93,
@@ -309,6 +313,8 @@ class StationService:
                     status_color=s_data["statusColor"],
                     altitude=s_data["altitude"],
                     environment_type=s_data["environmentType"],
+                    timezone=s_data.get("timezone", "UTC"),
+                    timezone_label=s_data.get("timezone_label", "UTC+0"),
                     hero_image=s_data.get("heroImage")
                 )
             )

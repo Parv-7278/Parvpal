@@ -7,6 +7,9 @@ from models.schemas import TelemetryIngestPayload
 from services.station_service import StationService, RAW_STATIONS_DATA
 from routers.websocket import manager
 
+import asyncio
+from services.supabase_client import insert_energy_telemetry_db
+
 logger = logging.getLogger("polaris.telemetry")
 router = APIRouter(prefix="/api", tags=["Telemetry Stream & Simulator Ingestion"])
 
@@ -26,11 +29,25 @@ async def ingest_telemetry(payload: TelemetryIngestPayload):
     # Update in-memory & database station telemetry
     updated_state = StationService.update_station_telemetry(payload)
     
+    # Asynchronously record to Supabase energy_telemetry
+    gen_kw = RAW_STATIONS_DATA[norm_id]["energy"]["generation"]
+    cons_kw = round(payload.power_consumption, 1)
+    batt_pct = round(payload.battery_level or payload.battery or 74.0, 1)
+    asyncio.create_task(insert_energy_telemetry_db({
+        "station_id": 2 if "bharati" in norm_id else 1,
+        "total_generation": gen_kw,
+        "battery_charge_pct": batt_pct,
+        "total_consumption": cons_kw,
+        "surplus": round(gen_kw - cons_kw, 1),
+        "recorded_at": datetime.utcnow().isoformat()
+    }))
+    
     # Detailed logging required by specification
     st_name = "maitri" if "maitri" in norm_id else "bharati"
     gen_temp = payload.generator_temperature
-    batt = payload.battery_level or payload.battery or 74.0
+    batt = batt_pct
     status_label = updated_state.get("generator_status", "RUNNING")
+
     
     logger.info(f"[TELEMETRY] station={st_name} generator_temperature={gen_temp}°C battery={batt}% status={status_label}")
 

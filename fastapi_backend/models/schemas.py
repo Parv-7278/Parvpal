@@ -42,6 +42,8 @@ class StationMetadata(BaseModel):
     status_color: str = "#10b981"
     altitude: str
     environment_type: str
+    timezone: str = "UTC"
+    timezone_label: str = "UTC+0"
     hero_image: Optional[str] = None
 
 # ==============================================================================

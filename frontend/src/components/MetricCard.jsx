@@ -1,6 +1,20 @@
 import React from 'react';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
 
-export default function MetricCard({ title, value, unit, icon: Icon, status = 'nominal', subtext, statusColor }) {
+export default function MetricCard({ 
+  title, 
+  value, 
+  unit, 
+  icon: Icon, 
+  status = 'nominal', 
+  subtext, 
+  statusColor,
+  details = [],
+  chart,
+  interpretation,
+  recommendation,
+  stationName
+}) {
   const getStatusClass = () => {
     switch (status) {
       case 'critical':
@@ -13,8 +27,29 @@ export default function MetricCard({ title, value, unit, icon: Icon, status = 'n
     }
   };
 
+  const defaultDetails = details.length > 0 ? details : [
+    { label: 'Current State', value: status.toUpperCase(), color: status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : '#10b981' },
+    { label: 'Telemetry Sensor', value: 'SCADA Bus Node-01', color: '#38bdf8' },
+    { label: 'Update Interval', value: '100ms Live', color: '#94a3b8' },
+  ];
+
   return (
-    <div className={`metric-card glass-panel ${getStatusClass()}`}>
+    <ExpandableTelemetryCard
+      title={title}
+      category="TELEMETRY TELEMETRY"
+      value={value}
+      unit={unit}
+      status={status}
+      icon={Icon}
+      subtext={subtext}
+      color={status === 'critical' ? '#ef4444' : status === 'warning' ? '#f59e0b' : '#38bdf8'}
+      details={defaultDetails}
+      chart={chart}
+      interpretation={interpretation || `Continuous polar sensor reading for ${title}. Operating within expected Antarctic operational envelope.`}
+      recommendation={recommendation}
+      stationName={stationName}
+      className={`metric-card glass-panel ${getStatusClass()}`}
+    >
       <div className="metric-header">
         <span className="metric-title">{title}</span>
         {Icon && <Icon size={20} className="metric-icon" />}
@@ -24,6 +59,6 @@ export default function MetricCard({ title, value, unit, icon: Icon, status = 'n
         {unit && <span className="metric-unit">{unit}</span>}
       </div>
       {subtext && <div className="metric-subtext">{subtext}</div>}
-    </div>
+    </ExpandableTelemetryCard>
   );
 }

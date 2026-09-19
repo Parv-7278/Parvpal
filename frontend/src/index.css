@@ -38,6 +38,14 @@
   --glow-green: 0 0 16px rgba(16, 185, 129, 0.35);
   --glow-amber: 0 0 16px rgba(245, 158, 11, 0.35);
   --glow-red: 0 0 16px rgba(239, 68, 68, 0.4);
+  /* Layering & Stacking Context Hierarchy System */
+  --z-base: 0;
+  --z-card: 1;
+  --z-dropdown: 20;
+  --z-sticky-nav: 30;
+  --z-backdrop: 40;
+  --z-modal: 50;
+  --z-toast: 60;
 }
 
 * {
@@ -71,10 +79,19 @@ body {
   box-shadow: var(--card-shadow);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
+  z-index: var(--z-card, 1);
+  min-width: 0;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .polaris-card:hover {
-  border-color: rgba(56, 189, 248, 0.3);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+img, svg {
+  max-width: 100%;
 }
 
 .card-title {

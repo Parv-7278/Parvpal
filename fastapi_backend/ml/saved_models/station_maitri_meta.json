@@ -1,0 +1,111 @@
+{
+  "station_id": "maitri",
+  "model_type": "RandomForestRegressor",
+  "trained_at": "2026-09-18T13:01:37.422416",
+  "raw_records_used": 168,
+  "feature_matrix_rows": 162,
+  "num_features": 39,
+  "features": [
+    "curr_battery",
+    "curr_consumption",
+    "curr_generation",
+    "curr_surplus",
+    "curr_gen_temp",
+    "curr_ambient_temp",
+    "curr_wind_speed",
+    "curr_humidity",
+    "curr_voltage",
+    "curr_current",
+    "sin_hour",
+    "cos_hour",
+    "lag1_battery",
+    "lag1_consumption",
+    "lag1_gen_temp",
+    "lag3_battery",
+    "lag3_consumption",
+    "lag3_gen_temp",
+    "lag6_battery",
+    "lag6_consumption",
+    "lag6_gen_temp",
+    "delta_battery_1step",
+    "delta_consumption_1step",
+    "delta_temp_1step",
+    "delta_battery_3step",
+    "delta_consumption_3step",
+    "delta_temp_3step",
+    "rolling_mean_cons_6",
+    "rolling_std_cons_6",
+    "rolling_mean_temp_6",
+    "rolling_std_temp_6",
+    "thermal_gradient",
+    "wind_cooling_factor",
+    "generation_headroom_ratio",
+    "load_factor",
+    "status_running",
+    "status_standby",
+    "status_overheat",
+    "status_fault"
+  ],
+  "targets": [
+    "batt_1h",
+    "batt_6h",
+    "batt_24h",
+    "cons_1h",
+    "cons_6h",
+    "cons_24h",
+    "temp_1h",
+    "temp_6h",
+    "temp_24h"
+  ],
+  "cv_splits_evaluated": 3,
+  "mean_r2": 0.918,
+  "mean_mae": 0.52,
+  "confidence": 0.9,
+  "target_metrics": {
+    "batt_1h": {
+      "r2": 0.98,
+      "mae": 0.3,
+      "rmse": 0.55
+    },
+    "batt_6h": {
+      "r2": 0.98,
+      "mae": 0.16,
+      "rmse": 0.36
+    },
+    "batt_24h": {
+      "r2": 0.951,
+      "mae": 0.03,
+      "rmse": 0.13
+    },
+    "cons_1h": {
+      "r2": 0.948,
+      "mae": 1.14,
+      "rmse": 1.39
+    },
+    "cons_6h": {
+      "r2": 0.944,
+      "mae": 1.16,
+      "rmse": 1.44
+    },
+    "cons_24h": {
+      "r2": 0.913,
+      "mae": 1.43,
+      "rmse": 1.88
+    },
+    "temp_1h": {
+      "r2": 0.92,
+      "mae": 0.16,
+      "rmse": 0.2
+    },
+    "temp_6h": {
+      "r2": 0.871,
+      "mae": 0.17,
+      "rmse": 0.2
+    },
+    "temp_24h": {
+      "r2": 0.754,
+      "mae": 0.16,
+      "rmse": 0.19
+    }
+  }
+}

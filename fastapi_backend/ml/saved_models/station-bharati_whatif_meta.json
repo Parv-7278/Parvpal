@@ -1,0 +1,127 @@
+{
+  "station_id": "station-bharati",
+  "model_type": "RandomForestRegressor (Multi-Horizon 20-Target)",
+  "trained_at": "2026-09-19T08:48:06.524335+00:00",
+  "training_samples": 2864,
+  "num_features": 45,
+  "num_targets": 20,
+  "cv_splits": 4,
+  "mean_r2": 0.89,
+  "mean_mae": 0.96,
+  "mean_rmse": 1.55,
+  "confidence_score": 0.88,
+  "top_features": {
+    "curr_power_consumption": 0.363,
+    "curr_power_generation": 0.1862,
+    "whatif_generator_derate": 0.0908,
+    "electrical_load_factor": 0.0896,
+    "curr_net_power": 0.0837,
+    "sin_diurnal_hour": 0.0461,
+    "cos_diurnal_hour": 0.0199,
+    "rolling_mean_consumption": 0.014,
+    "thermal_gradient": 0.0114,
+    "curr_humidity": 0.008
+  },
+  "target_metrics": {
+    "batt_15m": {
+      "r2": 0.977,
+      "mae": 0.11,
+      "rmse": 0.62
+    },
+    "pwr_gen_15m": {
+      "r2": 0.979,
+      "mae": 1.37,
+      "rmse": 2.37
+    },
+    "pwr_dem_15m": {
+      "r2": 0.966,
+      "mae": 2.12,
+      "rmse": 2.67
+    },
+    "gen_temp_15m": {
+      "r2": 0.985,
+      "mae": 0.44,
+      "rmse": 0.64
+    },
+    "life_sup_15m": {
+      "r2": 0.562,
+      "mae": 0.35,
+      "rmse": 0.53
+    },
+    "batt_30m": {
+      "r2": 0.978,
+      "mae": 0.1,
+      "rmse": 0.61
+    },
+    "pwr_gen_30m": {
+      "r2": 0.969,
+      "mae": 1.51,
+      "rmse": 2.87
+    },
+    "pwr_dem_30m": {
+      "r2": 0.966,
+      "mae": 2.1,
+      "rmse": 2.67
+    },
+    "gen_temp_30m": {
+      "r2": 0.987,
+      "mae": 0.43,
+      "rmse": 0.62
+    },
+    "life_sup_30m": {
+      "r2": 0.563,
+      "mae": 0.35,
+      "rmse": 0.53
+    },
+    "batt_60m": {
+      "r2": 0.979,
+      "mae": 0.1,
+      "rmse": 0.59
+    },
+    "pwr_gen_60m": {
+      "r2": 0.961,
+      "mae": 1.75,
+      "rmse": 3.24
+    },
+    "pwr_dem_60m": {
+      "r2": 0.964,
+      "mae": 2.16,
+      "rmse": 2.73
+    },
+    "gen_temp_60m": {
+      "r2": 0.987,
+      "mae": 0.42,
+      "rmse": 0.6
+    },
+    "life_sup_60m": {
+      "r2": 0.563,
+      "mae": 0.34,
+      "rmse": 0.52
+    },
+    "batt_120m": {
+      "r2": 0.979,
+      "mae": 0.11,
+      "rmse": 0.59
+    },
+    "pwr_gen_120m": {
+      "r2": 0.927,
+      "mae": 2.39,
+      "rmse": 4.41
+    },
+    "pwr_dem_120m": {
+      "r2": 0.96,
+      "mae": 2.26,
+      "rmse": 2.88
+    },
+    "gen_temp_120m": {
+      "r2": 0.982,
+      "mae": 0.45,
+      "rmse": 0.71
+    },
+    "life_sup_120m": {
+      "r2": 0.565,
+      "mae": 0.34,
+      "rmse": 0.51
+    }
+  }
+}

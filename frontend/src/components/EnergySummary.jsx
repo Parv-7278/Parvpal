@@ -1,9 +1,8 @@
 import React from 'react';
-import { SunMedium, BatteryCharging, Power, ArrowRight, Zap } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
+import { SunMedium, BatteryCharging, Power, ArrowRight, Zap, Activity } from 'lucide-react';
+import ExpandableTelemetryCard from './ExpandableTelemetryCard';
 
-export default function EnergySummary({ energy: energyProp }) {
-  const { openDrillDown } = useModal();
+export default function EnergySummary({ energy: energyProp, selectedStation = 'Maitri Station' }) {
   const energy = energyProp || {
     generation: 132,
     batteryPercent: 82,
@@ -11,134 +10,55 @@ export default function EnergySummary({ energy: energyProp }) {
     surplus: 27,
   };
 
-  const handleGenerationClick = () => {
-    openDrillDown({
-      title: 'Microgrid Total Power Generation',
-      category: 'ENERGY',
-      metricKey: 'power_generation',
-      currentValue: energy.generation,
-      unit: 'kW',
-      status: 'NORMAL',
-      thresholds: { warning: '< 100 kW (Low Margin)', critical: '< 80 kW (Deficit)' },
-      stats: { min: '95 kW', avg: '128 kW', max: '148 kW' },
-      historicalData: [
-        { time: '00:00', val: 110 },
-        { time: '04:00', val: 115 },
-        { time: '08:00', val: 135 },
-        { time: '12:00', val: 142 },
-        { time: '16:00', val: 138 },
-        { time: '20:00', val: 125 },
-        { time: 'Now', val: energy.generation },
-      ],
-      interpretation: 'Combined generation from Diesel Generator Gensets (G-01/G-02) and Solar Photovoltaic arrays is operating stably with healthy reserve headroom.',
-      recommendation: 'Scheduled oil sampling for Gen-01 due in 48 running hours.',
-    });
-  };
-
-  const handleStorageClick = () => {
-    openDrillDown({
-      title: 'Battery Energy Storage System (BESS) SoC',
-      category: 'ENERGY',
-      metricKey: 'battery_level',
-      currentValue: energy.batteryPercent,
-      unit: '%',
-      status: energy.batteryPercent < 40 ? 'WARNING' : 'OPTIMAL',
-      thresholds: { warning: '< 40% SoC', critical: '< 20% SoC' },
-      stats: { min: '62%', avg: '84%', max: '98%' },
-      historicalData: [
-        { time: '00:00', val: 74 },
-        { time: '04:00', val: 68 },
-        { time: '08:00', val: 78 },
-        { time: '12:00', val: 86 },
-        { time: '16:00', val: 84 },
-        { time: '20:00', val: 82 },
-        { time: 'Now', val: energy.batteryPercent },
-      ],
-      interpretation: 'LiFePO4 battery rack cell voltages balanced across 12 strings. State of Health (SoH) rated at 96.4%. Thermal management running nominal at +18°C.',
-      recommendation: 'Autonomous peak shaving algorithm armed.',
-    });
-  };
-
-  const handleConsumptionClick = () => {
-    openDrillDown({
-      title: 'Station Base Load & Life Support Power Consumption',
-      category: 'ENERGY',
-      metricKey: 'power_consumption',
-      currentValue: energy.consumption,
-      unit: 'kW',
-      status: 'NORMAL',
-      thresholds: { warning: '> 130 kW', critical: '> 150 kW (Overload)' },
-      stats: { min: '88 kW', avg: '102 kW', max: '122 kW' },
-      historicalData: [
-        { time: '00:00', val: 92 },
-        { time: '04:00', val: 88 },
-        { time: '08:00', val: 108 },
-        { time: '12:00', val: 114 },
-        { time: '16:00', val: 106 },
-        { time: '20:00', val: 104 },
-        { time: 'Now', val: energy.consumption },
-      ],
-      interpretation: 'Life support heating, water snow-melters, science laboratories, and comms transmitters consuming normal seasonal base load.',
-      recommendation: 'Non-critical snow melter tank #2 load shed ready on emergency trigger.',
-    });
-  };
-
-  const handleSurplusClick = () => {
-    openDrillDown({
-      title: 'Microgrid Net Power Surplus / Reserve Margin',
-      category: 'ENERGY',
-      metricKey: 'power_surplus',
-      currentValue: energy.surplus,
-      unit: 'kW',
-      status: energy.surplus >= 0 ? 'OPTIMAL' : 'WARNING',
-      thresholds: { warning: '< 10 kW', critical: '< 0 kW (Net Deficit)' },
-      stats: { min: '12 kW', avg: '26 kW', max: '42 kW' },
-      historicalData: [
-        { time: '00:00', val: 18 },
-        { time: '04:00', val: 27 },
-        { time: '08:00', val: 27 },
-        { time: '12:00', val: 28 },
-        { time: '16:00', val: 32 },
-        { time: 'Now', val: energy.surplus },
-      ],
-      interpretation: 'Net power generation exceeds station demand by positive delta. Excess power is continuously directed to trickle-charge the BESS bank.',
-      recommendation: 'Maintain current governor droop setting on active genset.',
-    });
-  };
-
   return (
     <div className="energy-summary-card polaris-card">
       <div className="card-header-simple">
         <span className="card-title">ENERGY SUMMARY</span>
-        <span className="card-subtitle-badge">CLICK NODES</span>
       </div>
 
       <div className="energy-flow-container">
         {/* Node 1: Generation */}
-        <div 
-          className="energy-flow-node clickable-drilldown-card"
-          onClick={handleGenerationClick}
-          title="Click to view full power generation diagnostics"
+        <ExpandableTelemetryCard
+          title="Total Power Generation"
+          category="ENERGY MICROGRID"
+          value={energy.generation}
+          unit="kW"
+          status="nominal"
+          icon={Zap}
+          color="#eab308"
+          subtext="Combined Genset, Solar & Wind Power Output"
+          details={[
+            { label: 'Baseline Generation', value: `${energy.generation} kW`, color: '#eab308' },
+            { label: 'Primary Genset G-01', value: `${Math.round(energy.generation * 0.55)} kW`, color: '#38bdf8' },
+            { label: 'Secondary Genset G-02', value: `${Math.round(energy.generation * 0.25)} kW`, color: '#38bdf8' },
+            { label: 'Renewable (Solar/Wind)', value: `${Math.round(energy.generation * 0.2)} kW`, color: '#10b981' },
+          ]}
+          interpretation="Polar microgrid generation capacity exceeds active station consumption demands with comfortable reserve headroom."
+          recommendation="Maintain automated load-dispatch balancing between diesel generators and renewable battery charging."
+          stationName={selectedStation}
+          className="energy-flow-node-wrapper"
         >
-          <span className="node-category-label">Generation</span>
-          <div className="node-icon-circle generation-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2">
-              <circle cx="12" cy="12" r="4" />
-              <path d="M12 2v2" />
-              <path d="M12 20v2" />
-              <path d="M4.93 4.93l1.41 1.41" />
-              <path d="M17.66 17.66l1.41 1.41" />
-              <path d="M2 12h2" />
-              <path d="M20 12h2" />
-              <path d="M6.34 17.66l-1.41 1.41" />
-              <path d="M19.07 4.93l-1.41 1.41" />
-            </svg>
+          <div className="energy-flow-node">
+            <span className="node-category-label">Generation</span>
+            <div className="node-icon-circle generation-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="M4.93 4.93l1.41 1.41" />
+                <path d="M17.66 17.66l1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="M6.34 17.66l-1.41 1.41" />
+                <path d="M19.07 4.93l-1.41 1.41" />
+              </svg>
+            </div>
+            <div className="node-value-box">
+              <span className="node-val mono-num">{energy.generation} <span className="val-unit">kW</span></span>
+              <span className="node-sub">Total Generation</span>
+            </div>
           </div>
-          <div className="node-value-box">
-            <span className="node-val mono-num">{energy.generation} <span className="val-unit">kW</span></span>
-            <span className="node-sub">Total Generation</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
         {/* Animated Connector 1 */}
         <div className="flow-connector-wrap">
@@ -158,24 +78,42 @@ export default function EnergySummary({ energy: energyProp }) {
         </div>
 
         {/* Node 2: Storage */}
-        <div 
-          className="energy-flow-node clickable-drilldown-card"
-          onClick={handleStorageClick}
-          title="Click to view battery storage telemetry"
+        <ExpandableTelemetryCard
+          title="Station Battery Storage (BESS)"
+          category="ENERGY STORAGE"
+          value={energy.batteryPercent}
+          unit="%"
+          percent={energy.batteryPercent}
+          status="nominal"
+          icon={BatteryCharging}
+          color="#10b981"
+          subtext="500 kWh Lithium-Titanate Uninterruptible Battery Bank"
+          details={[
+            { label: 'State of Charge (SoC)', value: `${energy.batteryPercent}%`, color: '#10b981' },
+            { label: 'Reserve Energy', value: `${Math.round(500 * (energy.batteryPercent / 100))} kWh`, color: '#38bdf8' },
+            { label: 'Bank Temperature', value: '+18.2°C', color: '#10b981' },
+            { label: 'Estimated Autonomy', value: '14.5 Hours', color: '#38bdf8' },
+          ]}
+          interpretation="Battery Energy Storage System (BESS) is in float charge equilibrium, buffering rapid load shifts."
+          recommendation="All 16 battery cell strings report voltage deviation < 8 mV. No cell balancing required."
+          stationName={selectedStation}
+          className="energy-flow-node-wrapper"
         >
-          <span className="node-category-label">Storage</span>
-          <div className="node-icon-circle storage-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-              <rect x="2" y="7" width="16" height="12" rx="2" />
-              <line x1="22" y1="11" x2="22" y2="15" />
-              <rect x="5" y="10" width="10" height="6" fill="#10b981" fillOpacity="0.7" rx="1" />
-            </svg>
+          <div className="energy-flow-node">
+            <span className="node-category-label">Storage</span>
+            <div className="node-icon-circle storage-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                <rect x="2" y="7" width="16" height="12" rx="2" />
+                <line x1="22" y1="11" x2="22" y2="15" />
+                <rect x="5" y="10" width="10" height="6" fill="#10b981" fillOpacity="0.7" rx="1" />
+              </svg>
+            </div>
+            <div className="node-value-box">
+              <span className="node-val mono-num green-highlight">{energy.batteryPercent}%</span>
+              <span className="node-sub">Battery Charge</span>
+            </div>
           </div>
-          <div className="node-value-box">
-            <span className="node-val mono-num green-highlight">{energy.batteryPercent}%</span>
-            <span className="node-sub">Battery Charge</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
 
         {/* Animated Connector 2 */}
         <div className="flow-connector-wrap">
@@ -195,38 +133,70 @@ export default function EnergySummary({ energy: energyProp }) {
         </div>
 
         {/* Node 3: Consumption */}
-        <div 
-          className="energy-flow-node clickable-drilldown-card"
-          onClick={handleConsumptionClick}
-          title="Click to view power consumption breakdown"
+        <ExpandableTelemetryCard
+          title="Total Energy Consumption"
+          category="ENERGY DEMAND"
+          value={energy.consumption}
+          unit="kW"
+          status="nominal"
+          icon={Activity}
+          color="#38bdf8"
+          subtext="Total Living Habitat, Lab & Utility Power Draw"
+          details={[
+            { label: 'Active Station Load', value: `${energy.consumption} kW`, color: '#38bdf8' },
+            { label: 'Heating & HVAC', value: `${Math.round(energy.consumption * 0.42)} kW (42%)`, color: '#f59e0b' },
+            { label: 'Science Instruments', value: `${Math.round(energy.consumption * 0.28)} kW (28%)`, color: '#06b6d4' },
+            { label: 'Galley & Habitat', value: `${Math.round(energy.consumption * 0.30)} kW (30%)`, color: '#10b981' },
+          ]}
+          interpretation="Energy consumption profiles reflect standard daytime scientific instrumentation and life support operations."
+          recommendation="Peak load threshold is configured at 175 kW with automatic shedding priority for non-essential water heating."
+          stationName={selectedStation}
+          className="energy-flow-node-wrapper"
         >
-          <span className="node-category-label">Consumption</span>
-          <div className="node-icon-circle consumption-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 3v3" />
-              <path d="M12 18v3" />
-              <path d="M3 12h3" />
-              <path d="M18 12h3" />
-            </svg>
+          <div className="energy-flow-node">
+            <span className="node-category-label">Consumption</span>
+            <div className="node-icon-circle consumption-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 3v3" />
+                <path d="M12 18v3" />
+                <path d="M3 12h3" />
+                <path d="M18 12h3" />
+              </svg>
+            </div>
+            <div className="node-value-box">
+              <span className="node-val mono-num">{energy.consumption} <span className="val-unit">kW</span></span>
+              <span className="node-sub">Total Consumption</span>
+            </div>
           </div>
-          <div className="node-value-box">
-            <span className="node-val mono-num">{energy.consumption} <span className="val-unit">kW</span></span>
-            <span className="node-sub">Total Consumption</span>
-          </div>
-        </div>
+        </ExpandableTelemetryCard>
       </div>
 
       {/* Surplus Footer Status */}
-      <div 
-        className="energy-card-footer clickable-drilldown-card"
-        onClick={handleSurplusClick}
-        title="Click to inspect power margin"
+      <ExpandableTelemetryCard
+        title="Net Energy Surplus"
+        category="GRID BALANCE"
+        value={`+${energy.surplus}`}
+        unit="kW"
+        status="nominal"
+        icon={Zap}
+        color="#10b981"
+        subtext="Available Headroom for Battery Buffer Charging"
+        details={[
+          { label: 'Surplus Headroom', value: `+${energy.surplus} kW`, color: '#10b981' },
+          { label: 'Total Generation', value: `${energy.generation} kW`, color: '#eab308' },
+          { label: 'Total Draw', value: `${energy.consumption} kW`, color: '#38bdf8' },
+        ]}
+        interpretation="Net positive surplus indicates robust grid stability. Excess energy is automatically directed to the BESS storage bank."
+        stationName={selectedStation}
+        className="energy-surplus-wrapper"
       >
-        <span className="surplus-badge">
-          Surplus: <strong className="mono-num">{energy.surplus} kW</strong>
-        </span>
-      </div>
+        <div className="energy-card-footer">
+          <span className="surplus-badge">
+            Surplus: <strong className="mono-num">+{energy.surplus} kW</strong>
+          </span>
+        </div>
+      </ExpandableTelemetryCard>
     </div>
   );
 }

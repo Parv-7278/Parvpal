@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS stations (
     latitude DECIMAL(9, 6) NOT NULL,
     longitude DECIMAL(9, 6) NOT NULL,
     status VARCHAR(20) DEFAULT 'ONLINE',
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    timezone_label VARCHAR(20) DEFAULT 'UTC+0',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

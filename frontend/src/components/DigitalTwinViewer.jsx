@@ -168,17 +168,15 @@ export default function DigitalTwinViewer({ selectedStation = 'station-maitri', 
           {/* Drifting Snow Particles */}
           <canvas ref={canvasRef} className="snow-particle-canvas" />
 
-          {/* Interactive Building Pins */}
+          {/* Visual Building Pins */}
           {showLayers && currentPins.map((pin) => {
             const isWarning = pin.type === 'warning';
-            const isSelected = activeModule?.id === pin.id;
 
             return (
               <div
                 key={pin.id}
-                className={`twin-pin-marker ${isWarning ? 'pin-warning' : 'pin-normal'} ${isSelected ? 'pin-selected' : ''}`}
+                className={`twin-pin-marker ${isWarning ? 'pin-warning' : 'pin-normal'}`}
                 style={{ top: pin.top, left: pin.left }}
-                onClick={(e) => handlePinClick(pin, e)}
               >
                 <div className="pin-pill-box">
                   <span className="pin-title-name">{pin.name}</span>
